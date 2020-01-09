@@ -1,5 +1,6 @@
+#*set your wd to the github map*
+
 library(stats)
-setwd(".")
 data <- read.csv("cleaned_unified_sample.csv")
 y1 = data[,22]
 y2 = data[,23]
