@@ -20,7 +20,6 @@ AwarenessGraph = function(data){
   data$id_date <- substr(data$id_date, 1, 10)
   
   ##'Digital Audio'###########################################################
-  
   #sum 'Digital Audio' by date
   dSumOfDigAudio <- aggregate(data$mc_digitalaudio_all, by=list(Date=data$id_date), FUN=sum)
   dSumOfDigAudio = dSumOfDigAudio[2]
@@ -41,7 +40,6 @@ AwarenessGraph = function(data){
        xlab = 'Survey (2019)', ylab = 'Weighted sum' ) 
   
   ##'Online Display'###########################################################
-  
   #sum 'Online Display' by date
   dSumOfOnlDisp <- aggregate(data$mc_onlinedisplay_all, by=list(Date=data$id_date), FUN=sum)
   dSumOfOnlDisp = dSumOfOnlDisp[2]
@@ -62,7 +60,6 @@ AwarenessGraph = function(data){
        xlab = 'Survey (2019)', ylab = 'Weighted sum') 
   
   ##'TV NBC'###########################################################
-  
   #sum 'Online Display' by date
   dSumOfTvNBC <- aggregate(data$mc_tv_nbc, by=list(Date=data$id_date), FUN=sum)
   dSumOfTvNBC  = dSumOfTvNBC [2]
