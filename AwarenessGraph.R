@@ -4,6 +4,7 @@ AwarenessGraph = function(data){
   #libraries
   library(ggplot2)
   library(dplyr)
+  library(data.table)
   
   #vector of unique dates
   vUniqueDates = as.vector(unique(substr(data$id_date, 1, 10)))
@@ -15,7 +16,6 @@ AwarenessGraph = function(data){
     #count number of times each specific date appears
     iCount[i] = sum(substr(data$id_date, 1, 10)==vUniqueDates[i]) 
   }
-  
   #take only the dates, not the time
   data$id_date <- substr(data$id_date, 1, 10)
   
@@ -90,5 +90,76 @@ AwarenessGraph = function(data){
   
   
   #Checking for KPI trends
+  
+  #Checking for KPI trends
+  ##'KPI Familiarity'#################################################
+  #sum 'kpi_familiarity' by date
+  dSumOfKpiFam <- aggregate(data$kpi_familiarity, by=list(Date=data$id_date), FUN=sum)
+  dSumOfKpiFam = dSumOfKpiFam[2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumKpiFam  = dSumOfKpiFam /iCount
+  #*100 to get percentage because kpi_familiarity is binary
+  dPercentageKpiFam = dWeightedSumKpiFam * 100
+  
+  #create df with the specific dates and percentages
+  dfDataKpiFam  = data.frame(vUniqueDates, dPercentageKpiFam)
+  dfDataKpiFam$vUniqueDates = as.Date(dfDataKpiFam$vUniqueDates)
+  
+  #plotting the mc_tv_nbc versus time
+  plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity versus time', 
+       xlab = 'Survey (2019)', ylab = 'Percentage' )  
+  #remove outliers of the weighted sum of the mc_onlinedisplay_all rows and plot again
+  # dfDataKpiFam <- dfDataKpiFam[dfDataKpiFam$x<100,]
+  # plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity of versus time',
+  #      xlab = 'Survey (2019)', ylab = 'Percentage')
+  
+  
+  ##'KPI Awareness'#################################################
+  #sum 'kpi_awareness' by date
+  dSumOfKpiAwa <- aggregate(data$kpi_awareness, by=list(Date=data$id_date), FUN=sum)
+  dSumOfKpiAwa = dSumOfKpiAwa[2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumKpiAwa  = dSumOfKpiAwa /iCount
+  #*100 to get percentage because kpi's are binary
+  dPercentageKpiAwa = dWeightedSumKpiAwa * 100
+  
+  #create df with the specific dates and percentages
+  dfDataKpiAwa = data.frame(vUniqueDates, dPercentageKpiAwa)
+  dfDataKpiAwa$vUniqueDates = as.Date(dfDataKpiAwa$vUniqueDates)
+  
+  #plotting the mc_tv_nbc versus time
+  plot(dfDataKpiAwa, main = 'Percentage of KPI_awareness versus time', 
+       xlab = 'Survey (2019)', ylab = 'Percentage' )  
+  
+  #(Downside outliers??)
+  
+  ##'KPI Consideration'#############################################
+  #sum 'kpi_awareness' by date
+  dSumOfKpiCon <- aggregate(data$kpi_consideration, by=list(Date=data$id_date), FUN=sum)
+  dSumOfKpiCon = dSumOfKpiCon[2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumKpiCon  = dSumOfKpiCon /iCount
+  #*100 to get percentage because kpi's are binary
+  dPercentageKpiCon = dWeightedSumKpiCon * 100
+  
+  #create df with the specific dates and percentages
+  dfDataKpiCon = data.frame(vUniqueDates, dPercentageKpiCon)
+  dfDataKpiCon$vUniqueDates = as.Date(dfDataKpiCon$vUniqueDates)
+  
+  #plotting the mc_tv_nbc versus time
+  plot(dfDataKpiCon, main = 'Percentage of KPI_consideration versus time', 
+       xlab = 'Survey (2019)', ylab = 'Percentage' ) 
+  
+  #remove outliers of the weighted sum of the mc_onlinedisplay_all rows and plot again
+  dfDataKpiCon <- dfDataKpiCon[dfDataKpiCon$x<100,]
+  plot(dfDataKpiCon, main = 'Percentage of KPI_consideration of versus time',
+       xlab = 'Survey (2019)', ylab = 'Percentage')
+  
+  #(Down and upside outliers??)
+  
+
   
 }
