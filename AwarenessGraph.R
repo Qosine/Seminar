@@ -1,5 +1,6 @@
 AwarenessGraph = function(data){
   ##Function that will graph the change of the brand attraction over time
+  #Time divided in days
   
   #libraries
   library(ggplot2)
@@ -9,7 +10,7 @@ AwarenessGraph = function(data){
   #vector of unique dates
   vUniqueDates = as.vector(unique(substr(data$id_date, 1, 10)))
   #how many unique dates (int)
-  iNoUniqueDates = length(unique(substr(data$id_date, 1, 10)))
+  iNoUniqueDates = length(vUniqueDates)
 
   iCount <- vector()
   for (i in 1:iNoUniqueDates){
@@ -163,5 +164,82 @@ AwarenessGraph = function(data){
 
   
   
+  
+  
+  #Time divided in weeks
+  
+  #vector of unique weeknumbers
+  vUniqueWeeks <- as.vector(unique(week(data$id_date)))
+  #how many unique weeks (int)
+  iNoUniqueWeeks = length(vUniqueWeeks)
+  
+  data$id_week = week(data$id_date)
+  iCountWeeks <- vector()
+  for (i in 1:iNoUniqueWeeks){
+    #count number of times each specific week appears
+    iCountWeeks[i] = sum(data$id_week==vUniqueWeeks[i]) 
+  }
+  
+  #Checking for KPI trends
+  
+  #Weekly data
+  ##'KPI Familiarity'#################################################
+  #sum 'kpi_familiarity' by date
+  dSumOfKpiFam <- aggregate(data$kpi_familiarity, by=list(Date=data$id_week), FUN=sum)
+  dSumOfKpiFam = dSumOfKpiFam[2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumKpiFam  = dSumOfKpiFam /iCountWeeks
+  #*100 to get percentage because kpi_familiarity is binary
+  dPercentageKpiFam = dWeightedSumKpiFam * 100
+  
+  #create df with the specific dates and percentages
+  dfDataKpiFam  = data.frame(vUniqueWeeks, dPercentageKpiFam)
+  dfDataKpiFam$vUniqueDates = as.Date(dfDataKpiFam$vUniqueDates)
+  
+  #plotting the mc_tv_nbc versus time
+  plot(dfDataKpiFam, main = 'Survey: Percentage of KPI_familiarity versus time', 
+       xlab = 'Week number of 2019', ylab = 'Percentage' )  
+  #remove outliers of the weighted sum of the mc_onlinedisplay_all rows and plot again
+  # dfDataKpiFam <- dfDataKpiFam[dfDataKpiFam$x<100,]
+  # plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity of versus time',
+  #      xlab = 'Survey (2019)', ylab = 'Percentage')
+  
+  
+  ##'KPI Awareness'#################################################
+  #sum 'kpi_awareness' by date
+  dSumOfKpiAwa <- aggregate(data$kpi_awareness, by=list(Date=data$id_week), FUN=sum)
+  dSumOfKpiAwa = dSumOfKpiAwa[2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumKpiAwa  = dSumOfKpiAwa /iCountWeeks
+  #*100 to get percentage because kpi's are binary
+  dPercentageKpiAwa = dWeightedSumKpiAwa * 100
+  
+  #create df with the specific dates and percentages
+  dfDataKpiAwa = data.frame(vUniqueWeeks, dPercentageKpiAwa)
+  dfDataKpiAwa$vUniqueDates = as.Date(dfDataKpiAwa$vUniqueDates)
+  
+  #plotting the mc_tv_nbc versus time
+  plot(dfDataKpiAwa, main = 'Survey: Percentage of KPI_awareness versus time', 
+       xlab = 'Week number of 2019', ylab = 'Percentage' )  
+  
+  ##'KPI Consideration'#############################################
+  #sum 'kpi_awareness' by date
+  dSumOfKpiCon <- aggregate(data$kpi_consideration, by=list(Date=data$id_week), FUN=sum)
+  dSumOfKpiCon = dSumOfKpiCon[2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumKpiCon  = dSumOfKpiCon /iCountWeeks
+  #*100 to get percentage because kpi's are binary
+  dPercentageKpiCon = dWeightedSumKpiCon * 100
+  
+  #create df with the specific dates and percentages
+  dfDataKpiCon = data.frame(vUniqueWeeks, dPercentageKpiCon)
+  dfDataKpiCon$vUniqueDates = as.Date(dfDataKpiCon$vUniqueDates)
+  
+  #plotting the mc_tv_nbc versus time
+  plot(dfDataKpiCon, main = 'Survey: Percentage of KPI_consideration versus time', 
+       xlab = 'Week number of 2019', ylab = 'Percentage' ) 
   
 }
