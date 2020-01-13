@@ -3,7 +3,6 @@ AwarenessGraph = function(data){
   #Time divided in days
   
   #libraries
-  library(ggplot2)
   library(dplyr)
   library(data.table)
   
@@ -93,6 +92,8 @@ AwarenessGraph = function(data){
   #Checking for KPI trends
   
   #Checking for KPI trends
+  
+  ##Checking for KPI Trends (daily)####
   ##'KPI Familiarity'#################################################
   #sum 'kpi_familiarity' by date
   dSumOfKpiFam <- aggregate(data$kpi_familiarity, by=list(Date=data$id_date), FUN=sum)
@@ -107,13 +108,13 @@ AwarenessGraph = function(data){
   dfDataKpiFam  = data.frame(vUniqueDates, dPercentageKpiFam)
   dfDataKpiFam$vUniqueDates = as.Date(dfDataKpiFam$vUniqueDates)
   
-  #plotting the mc_tv_nbc versus time
-  plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity versus time', 
-       xlab = 'Survey (2019)', ylab = 'Percentage' )  
-  #remove outliers of the weighted sum of the mc_onlinedisplay_all rows and plot again
-  # dfDataKpiFam <- dfDataKpiFam[dfDataKpiFam$x<100,]
-  # plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity of versus time',
-  #      xlab = 'Survey (2019)', ylab = 'Percentage')
+  # #plotting the mc_tv_nbc versus time
+  # plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity versus time', 
+  #      xlab = 'Survey (2019)', ylab = 'Percentage' )  
+  # remove outliers of the weighted sum of the mc_onlinedisplay_all rows and plot again
+  dfDataKpiFam <- dfDataKpiFam[dfDataKpiFam$x<100,]
+  plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity of versus time',
+       xlab = 'Survey (2019)', ylab = 'Percentage')
   
   
   ##'KPI Awareness'#################################################
@@ -132,7 +133,13 @@ AwarenessGraph = function(data){
   
   #plotting the mc_tv_nbc versus time
   plot(dfDataKpiAwa, main = 'Percentage of KPI_awareness versus time', 
-       xlab = 'Survey (2019)', ylab = 'Percentage' )  
+       xlab = 'Survey (2019)', ylab = 'Percentage' ) 
+  dfDataKpiAwa <- dfDataKpiAwa[dfDataKpiAwa$x<100,]
+  plot(dfDataKpiAwa, main = 'Percentage of KPI_awareness versus time', 
+       xlab = 'Survey (2019)', ylab = 'Percentage') 
+  
+  
+  
   
   #(Downside outliers??)
   
@@ -166,8 +173,7 @@ AwarenessGraph = function(data){
   
   
   
-  #Time divided in weeks
-  
+  ##Time divided in weeks
   #vector of unique weeknumbers
   vUniqueWeeks <- as.vector(unique(week(data$id_date)))
   #how many unique weeks (int)
@@ -180,10 +186,14 @@ AwarenessGraph = function(data){
     iCountWeeks[i] = sum(data$id_week==vUniqueWeeks[i]) 
   }
   
-  #Checking for KPI trends
+
   
-  #Weekly data
-  ##'KPI Familiarity'#################################################
+  
+  
+  
+  ##Checking for KPI Trends (weekly)####
+  
+  ##'KPI Familiarity'#################################################################
   #sum 'kpi_familiarity' by date
   dSumOfKpiFam <- aggregate(data$kpi_familiarity, by=list(Date=data$id_week), FUN=sum)
   dSumOfKpiFam = dSumOfKpiFam[2]
@@ -200,13 +210,8 @@ AwarenessGraph = function(data){
   #plotting the mc_tv_nbc versus time
   plot(dfDataKpiFam, main = 'Survey: Percentage of KPI_familiarity versus time', 
        xlab = 'Week number of 2019', ylab = 'Percentage' )  
-  #remove outliers of the weighted sum of the mc_onlinedisplay_all rows and plot again
-  # dfDataKpiFam <- dfDataKpiFam[dfDataKpiFam$x<100,]
-  # plot(dfDataKpiFam, main = 'Percentage of KPI_familiarity of versus time',
-  #      xlab = 'Survey (2019)', ylab = 'Percentage')
   
-  
-  ##'KPI Awareness'#################################################
+  ##'KPI Awareness'##################################################################
   #sum 'kpi_awareness' by date
   dSumOfKpiAwa <- aggregate(data$kpi_awareness, by=list(Date=data$id_week), FUN=sum)
   dSumOfKpiAwa = dSumOfKpiAwa[2]
@@ -224,7 +229,7 @@ AwarenessGraph = function(data){
   plot(dfDataKpiAwa, main = 'Survey: Percentage of KPI_awareness versus time', 
        xlab = 'Week number of 2019', ylab = 'Percentage' )  
   
-  ##'KPI Consideration'#############################################
+  ##'KPI Consideration'#################################################################
   #sum 'kpi_awareness' by date
   dSumOfKpiCon <- aggregate(data$kpi_consideration, by=list(Date=data$id_week), FUN=sum)
   dSumOfKpiCon = dSumOfKpiCon[2]
@@ -241,5 +246,7 @@ AwarenessGraph = function(data){
   #plotting the mc_tv_nbc versus time
   plot(dfDataKpiCon, main = 'Survey: Percentage of KPI_consideration versus time', 
        xlab = 'Week number of 2019', ylab = 'Percentage' ) 
+  
+  
   
 }
