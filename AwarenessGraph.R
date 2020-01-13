@@ -20,7 +20,7 @@ AwarenessGraph = function(data){
   data$id_date <- substr(data$id_date, 1, 10)
   
   
-  #Checking for Media Consumption trends
+  #Checking for Media Consumption trends (daily)
   ##'Digital Audio'###########################################################
   #sum 'Digital Audio' by date
   dSumOfDigAudio <- aggregate(data$mc_digitalaudio_all, by=list(Date=data$id_date), FUN=sum)
@@ -93,6 +93,7 @@ AwarenessGraph = function(data){
   
   #Checking for KPI trends
   
+  
   ##Checking for KPI Trends (daily)####
   ##'KPI Familiarity'#################################################
   #sum 'kpi_familiarity' by date
@@ -157,23 +158,20 @@ AwarenessGraph = function(data){
   dfDataKpiCon = data.frame(vUniqueDates, dPercentageKpiCon)
   dfDataKpiCon$vUniqueDates = as.Date(dfDataKpiCon$vUniqueDates)
   
-  #plotting the mc_tv_nbc versus time
-  plot(dfDataKpiCon, main = 'Percentage of KPI_consideration versus time', 
-       xlab = 'Survey (2019)', ylab = 'Percentage' ) 
-  
+  # #plotting the mc_tv_nbc versus time
+  # plot(dfDataKpiCon, main = 'Percentage of KPI_consideration versus time', 
+  #      xlab = 'Survey (2019)', ylab = 'Percentage' ) 
+  # 
   #remove outliers of the weighted sum of the mc_onlinedisplay_all rows and plot again
   dfDataKpiCon <- dfDataKpiCon[dfDataKpiCon$x<100,]
-  plot(dfDataKpiCon, main = 'Percentage of KPI_consideration of versus time',
+  plot(dfDataKpiCon, main = 'Percentage of KPI_consideration of versus time (outliers removed)',
        xlab = 'Survey (2019)', ylab = 'Percentage')
   
   #(Down and upside outliers??)
   
-
+  ##Checking for KPI Trends (weekly)####
   
-  
-  
-  
-  ##Time divided in weeks
+  #devide the time in weeks
   #vector of unique weeknumbers
   vUniqueWeeks <- as.vector(unique(week(data$id_date)))
   #how many unique weeks (int)
@@ -188,10 +186,6 @@ AwarenessGraph = function(data){
   
 
   
-  
-  
-  
-  ##Checking for KPI Trends (weekly)####
   
   ##'KPI Familiarity'#################################################################
   #sum 'kpi_familiarity' by date
@@ -249,4 +243,50 @@ AwarenessGraph = function(data){
   
   
   
+  
+  
+  ##Checking for Media trends (Weekly) ####
+  ##'Digital Audio'###########################################################
+  #sum 'Digital Audio' by week
+  dSumOfDigAudio <- aggregate(data$mc_digitalaudio_all, by=list(Date=data$id_week), FUN=sum)
+  dSumOfDigAudio = dSumOfDigAudio[2]
+  
+  #weight the sum over number of obs's in group (week)
+  dWeightedSumDigAudio= dSumOfDigAudio/iCountWeeks
+  #create df with the specific weeks and weighted sums
+  dfDataDigAud = data.frame(vUniqueWeeks, dWeightedSumDigAudio)
+  
+  #plotting the mc_digital_audio_all versus time
+  plot(dfDataDigAud, main = 'Weighted sum of mc_digital_audio_all versus time (weeks)', 
+       xlab = 'Week number of 2019', ylab = 'Weighted sum' )  
+  
+  ##'Online Display'###########################################################
+  #sum 'Online Display' by date
+  dSumOfOnlDisp <- aggregate(data$mc_onlinedisplay_all, by=list(Date=data$id_week), FUN=sum)
+  dSumOfOnlDisp = dSumOfOnlDisp[2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumOnlDisp = dSumOfOnlDisp/iCountWeeks
+  #create df with the specific dates and weighted sums
+  dfDataOnlDisp = data.frame(vUniqueWeeks, dWeightedSumOnlDisp)
+  
+  #plotting the mc_digital_audio_all versus time
+  plot(dfDataOnlDisp, main = 'Weighted sum of mc_onlinedisplay_all versus time (weeks)', 
+       xlab = 'Week number of 2019', ylab = 'Weighted sum' )  
+  
+  ##'TV NBC'###########################################################
+  #This variable is chosen because it has least zero-values
+  #therefore might have more information
+  #sum 'Online Display' by date
+  dSumOfTvNBC <- aggregate(data$mc_tv_nbc, by=list(Date=data$id_week), FUN=sum)
+  dSumOfTvNBC  = dSumOfTvNBC [2]
+  
+  #weight the sum over number of obs's in group (date)
+  dWeightedSumTvNBC  = dSumOfTvNBC /iCountWeeks
+  #create df with the specific dates and weighted sums
+  dfDataTvNBC  = data.frame(vUniqueWeeks, dWeightedSumTvNBC)
+  
+  #plotting the mc_tv_nbc versus time
+  plot(dfDataTvNBC, main = 'Weighted sum of mc_tv_nbc versus time (weeks)', 
+       xlab = 'Week number of 2019', ylab = 'Weighted sum' )  
 }
