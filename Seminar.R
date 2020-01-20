@@ -7,7 +7,7 @@ library(grplasso)
 setwd("C:/Users/marcs/OneDrive/Bureaublad/Master/Seminar")
 getwd()
 set.seed(1)
-data <- read.csv("./cleaned_unified_sample.csv")
+data <- read.csv(file.choose())
 CPS <- rbind(c(0.203195,0.10298,0.100214),
              c(0.185959,0.092719,0.09324),
              c(0.186438,0.091954,0.094484),
