@@ -3,6 +3,8 @@ AwarenessGraph = function(data){
   #Time divided in days
   
   #libraries
+  data <- read.csv(file.choose())
+  
   library(dplyr)
   library(data.table)
   
@@ -93,6 +95,8 @@ AwarenessGraph = function(data){
   
   #Checking for KPI trends
   
+  
+  ##Checking for contact
   
   ##Checking for KPI Trends (daily)####
   ##'KPI Familiarity'#################################################
@@ -199,7 +203,6 @@ AwarenessGraph = function(data){
   
   #create df with the specific dates and percentages
   dfDataKpiFam  = data.frame(vUniqueWeeks, dPercentageKpiFam)
-  dfDataKpiFam$vUniqueDates = as.Date(dfDataKpiFam$vUniqueDates)
   
   #plotting the mc_tv_nbc versus time
   plot(dfDataKpiFam, main = 'Survey: Percentage of KPI_familiarity versus time', 
@@ -217,8 +220,7 @@ AwarenessGraph = function(data){
   
   #create df with the specific dates and percentages
   dfDataKpiAwa = data.frame(vUniqueWeeks, dPercentageKpiAwa)
-  dfDataKpiAwa$vUniqueDates = as.Date(dfDataKpiAwa$vUniqueDates)
-  
+
   #plotting the mc_tv_nbc versus time
   plot(dfDataKpiAwa, main = 'Survey: Percentage of KPI_awareness versus time', 
        xlab = 'Week number of 2019', ylab = 'Percentage' )  
@@ -235,8 +237,7 @@ AwarenessGraph = function(data){
   
   #create df with the specific dates and percentages
   dfDataKpiCon = data.frame(vUniqueWeeks, dPercentageKpiCon)
-  dfDataKpiCon$vUniqueDates = as.Date(dfDataKpiCon$vUniqueDates)
-  
+
   #plotting the mc_tv_nbc versus time
   plot(dfDataKpiCon, main = 'Survey: Percentage of KPI_consideration versus time', 
        xlab = 'Week number of 2019', ylab = 'Percentage' ) 
@@ -289,4 +290,21 @@ AwarenessGraph = function(data){
   #plotting the mc_tv_nbc versus time
   plot(dfDataTvNBC, main = 'Weighted sum of mc_tv_nbc versus time (weeks)', 
        xlab = 'Week number of 2019', ylab = 'Weighted sum' )  
+ 
+   
+  dfDataKPI = data.frame(vUniqueWeeks, x1 = dfDataKpiFam$x ,x2= dfDataKpiAwa$x, x3 = dfDataKpiCon$x)
+  
+  library(ggplot2)
+  library(gridExtra)
+  library(grid)
+  plot <- ggplot(dfDataKPI, aes(x=vUniqueWeeks, y=x1)) +                    # basic graphical object
+    geom_point(aes(y=dfDataKpiFam$x), colour="palegreen3", size=2, fill=dfDataKPI$x1) + # first layer
+    geom_point(aes(y=dfDataKpiAwa$x), colour="coral1", shape=18, size =3) +  # second layer
+    geom_point(aes(y=dfDataKpiCon$x), colour="royalblue2", shape= 17, size=2) +# third layer
+    ylab("KPI Percentage") + xlab("Week number of 2019")+
+    theme_bw()
+  plot
+  
+  
+  
 }
