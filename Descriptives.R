@@ -21,15 +21,15 @@ v_yousum = df_contacts[,90]
 
 
 # Calculate mean and sd of the nonzero values. Besides, the proportion of zeroes is calculated.
-cat_means <- round(cbind(mean(v_audiosum[v_audiosum != 0]), mean(v_digitalsum[v_digitalsum != 0]),
+v_cat_means <- round(cbind(mean(v_audiosum[v_audiosum != 0]), mean(v_digitalsum[v_digitalsum != 0]),
                          mean(v_programsum[v_programsum != 0]), mean(v_tvsum[v_tvsum != 0]), 
                          mean(v_vodsum[v_vodsum != 0]), mean(v_yousum[v_yousum != 0])), 3)
 
-cat_sd <-  round(cbind(sd(v_audiosum[v_audiosum != 0]), sd(v_digitalsum[v_digitalsum != 0]),
+v_cat_sd <-  round(cbind(sd(v_audiosum[v_audiosum != 0]), sd(v_digitalsum[v_digitalsum != 0]),
                        sd(v_programsum[v_programsum != 0]), sd(v_tvsum[v_tvsum != 0]), 
                        sd(v_vodsum[v_vodsum != 0]), sd(v_yousum[v_yousum != 0])), 3)
 
-car_prop_zero <- round(cbind(length(v_audiosum[v_audiosum != 0])/nrow(data),
+v_car_prop_zero <- round(cbind(length(v_audiosum[v_audiosum != 0])/nrow(data),
                              length(v_digitalsum[v_digitalsum != 0])/nrow(data),
                              length(v_programsum[v_programsum != 0])/nrow(data),
                              length(v_tvsum[v_tvsum != 0])/nrow(data),
