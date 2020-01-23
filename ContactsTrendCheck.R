@@ -5,6 +5,7 @@ ContactsTrendCheck <- function(data){
   
   data <- read.csv(file.choose())
   
+  #add column with the day of the year for each observation
   data$id_date = yday(substr(data$id_date,1,10))
   #keep only the contacts data for convenience
   data <- data[,substr(colnames(data),1,8)=="contacts" | colnames(data)=="id_date"|substr(colnames(data),1,3)=="kpi" ]
