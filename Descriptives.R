@@ -1,3 +1,6 @@
+install.packages("dplyr")
+library(dplyr)
+
 setwd("C:/Users/marti/Documents/Uni/Ectrie/Seminar")
 getwd()
 set.seed(1)
@@ -35,3 +38,31 @@ v_car_prop_zero <- round(cbind(length(v_audiosum[v_audiosum != 0])/nrow(data),
                              length(v_tvsum[v_tvsum != 0])/nrow(data),
                              length(v_vodsum[v_vodsum != 0])/nrow(data),
                              length(v_yousum[v_yousum != 0])/nrow(data)),3)
+
+#Create age groups
+data$age_group <- NA
+for (i in 1:nrow(data)){
+  if (data$sd_age[i] >= 25 && data$sd_age[i] <= 34) {
+    data$age_group[i] <- "25-34"
+  } else if (data$sd_age[i] >= 35 && data$sd_age[i] <= 44) {
+    data$age_group[i] <- "35-44"
+  } else if (data$sd_age[i] >= 45 && data$sd_age[i] <= 54) {
+    data$age_group[i] <- "45-54"
+  } else {data$age_group[i] <- "55+"}
+}
+
+# First, pivot tables that inclue the number of 1's and 0's across genders and age groups.
+# Then, the number of 0's is divided by the number of people in total in the age group 
+# (both male and female)
+t_pivot_familiarity <-  table(data$age_group, data$sd_gender, data$kpi_familiarity)
+v_prop_zero_fami <- as.vector(round(t_pivot_familiarity[c(1:8)]/(t_pivot_familiarity[c(1:8)] + t_pivot_familiarity[c(9:16)]), 3))
+
+t_pivot_consideration <-  table(data$age_group, data$sd_gender, data$kpi_consideration)
+v_prop_zero_consi <- as.vector(round(t_pivot_consideration[c(1:8)]/(t_pivot_consideration[c(1:8)] + t_pivot_consideration[c(9:16)]), 3))
+
+t_pivot_awareness <-  table(data$age_group, data$sd_gender, data$kpi_awareness)
+v_prop_zero_aware <- as.vector(round(t_pivot_awareness[c(1:8)]/(t_pivot_awareness[c(1:8)] + t_pivot_awareness[c(9:16)]), 3))
+
+# Bind vector and write to a CSV file. 
+m_total <- cbind(v_prop_zero_aware, v_prop_zero_consi, v_prop_zero_fami)
+write.csv2(m_total, file = "pivot_gender.csv")
