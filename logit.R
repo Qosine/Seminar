@@ -41,3 +41,28 @@ Lasso_logit <- function(y, X){
   cvfit <- glmnet::cv.glmnet(X, y)
   return(coef(cvfit, s = "lambda.min"))
 }
+
+survey_strat_logit <- function(df_X, v_y, Weights_res){
+  
+  #data alterations
+  df_glm_data <- as.data.frame(cbind(v_y,df_X))
+  v_x_var <- colnames(df_X[,-which(colnames(df_X) == "v_strat")])
+  str_x_var <- paste(v_x_var,collapse=" + ")
+  stratfunction = paste("v_y ~ ", str_x_var)
+  
+  #define stratified sample design
+  f_stratdesign <- 
+    svydesign(
+      id = ~1,
+      data = df_glm_data  ,
+      weight = Weights_res ,
+      strata = strat ,
+    )
+  
+  #weighted surbey glm estimator 
+  glmest <- svyglm(stratfunction,
+                   design =  f_stratdesign, family = "quasibinomial")
+  
+  #return summary
+  return(summary(glmest))
+}
