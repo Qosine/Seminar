@@ -1,4 +1,4 @@
-install.packages("stringr")
+install.packages("survey")
 library(stats)
 library(glmnet)
 library(noia)
@@ -6,6 +6,9 @@ library(plot)
 library(grplasso)
 library(dplyr)
 library(stringr)
+library(matlib)
+library(survey)
+library(lubridate)
 setwd("C:/Users/marcs/OneDrive/Bureaublad/Master/Seminar")
 getwd()
 set.seed(1)
@@ -23,6 +26,7 @@ d_CPS_target <- CPS[1,3]
 str_gender <- "male"
 i_lower <- 25
 i_upper <- 34
+
 
 #get function files
 source(file = "./AwarenessGraph.R",local=TRUE) 
@@ -43,14 +47,14 @@ df_controlvar = data[,4:21]
 
 
 #X variables/regressors
-v_audiosum = rowSums(X[,1:5])
-v_digitalsum = rowSums(X[,6:12])
-v_programsum = X[,13]
-v_tvsum = rowSums(X[,14:81])
-v_vodsum = rowSums(X[,82:89])
-v_yousum = X[,90]
+v_audiosum = rowSums(df_contacts[,1:5])
+v_digitalsum = rowSums(df_contacts[,6:12])
+v_programsum = df_contacts[,13]
+v_tvsum = rowSums(df_contacts[,14:81])
+v_vodsum = rowSums(df_contacts[,82:89])
+v_yousum = df_contacts[,90]
 v_weeks <- week(data$id_date)
-v_logweeks <- log(weeks)
+v_logweeks <- log(v_weeks)
 
 #control variables
 v_male <- (ifelse(data$sd_gender == "male", 1,0))
@@ -75,15 +79,21 @@ v_etn_other <- (ifelse(data$sd_ethnicity_other == "yes", 1,0))
 v_married <- (ifelse(data$sd_maritalstatus == "married", 1,0))
 v_single <- (ifelse(data$sd_maritalstatus == "single", 1,0))
 v_seperated <- (ifelse(data$sd_maritalstatus == "seperated", 1,0))
+v_strat <- ifelse(data$sd_age <=34 & data$sd_age >=25 & data$sd_gender == "male", 1,0)
 
-#Define your X and y
+#Define your X and y, vstrat is necessary for surveylogit(is filtered out in function)
 df_X <- cbind(v_audiosum,v_digitalsum,v_programsum,v_tvsum,v_vodsum,v_yousum, v_logweeks, v_male, 
                v_age3544, v_age4554, v_age55plus, v_havechildren, v_etn_cauc,
-               v_income030, v_income3050,v_income5075, v_income75100,v_income100150, v_educ2, v_educ3)
+               v_income030, v_income3050,v_income5075, v_income75100,v_income100150, v_educ2, v_educ3,v_strat)
 v_y = v_kpi_awareness
+
+
+
 
 #functions from logit file
 logit_res <- logit(v_y,df_X)
 Weights_res <- weights(data,d_CPS_target,str_gender,i_upper, i_lower)
-wlogit_res <- Wlogit(v_y, df_X, Weights_res)
+wlogit_res <- Wlogit(v_y, df_X, dum_Weights)
 lasso_res <- Lasso_logit(v_y, df_X)
+survey_strat_logit(df_X, v_y, Weights_res)
+
