@@ -30,9 +30,16 @@ read_source_data <- function(path) {
 }
 
 split_sample <- function(data,
-                         target_gender_m=TRUE,
-                         min_age=25, # min_age and max_age are INCLUSIVE
-                         max_age=34) {
+                         target1_characteristics,
+                         target2_characteristics) {
+  
+  # Target group 1
+  if (target1_characteristics$male==TRUE) {target_gender="male"}
+  else {target_gender="female"}
+  
+  target1_sample = data[ ( data["sd_gender"]==target_gender
+                           & data["sd_age"]>=target1_characteristics$min_age
+                           & data["sd_age"]<=target1_characteristics$max_age ), ] 
   
   if (target_gender_m==TRUE) {target_gender="male"} else {target_gender="female"}
   
