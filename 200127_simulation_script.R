@@ -22,7 +22,7 @@ split_sample <- function(data,
 }
 
 ## EXPLANATORY VARIABLES / PREDICTORS ##
-create_predictors_responses <- function(subsample) {
+separate_predictors_responses <- function(subsample) {
   
   # Extract columns of interest
   df_contacts = subsample[,93:182]
@@ -49,42 +49,39 @@ create_predictors_responses <- function(subsample) {
   return(out)
 }
 
-
-## ESTIMATE PARAMETERS FOR DGP ##
-
-estimate_params <- function(true_predictors, true_outcomes) {
-  logit <- glm( true_outcomes ~ true_predictors, family=binomial(link="logit") )
-  true_params <- logit_real_data$coefficients[,1]
-  return (true_params)
-}
-
-
 ## DEPENDENT VARIABLES / OUTCOMES ##
 
 sigmoid_function <- function(x) 1/(1+exp(-x))
 
-generate_outcomes <- function(predictors, parameters, sample_size) {
+generate_response <- function(predictors, parameters, sample_size) {
   Pr_success <- sigmoid_function( predictors%*%parameters ) # compute Pr(Y=1 | X=x)
-  outcomes <- rbern( n=sample_size, prob=Pr_success ) # draw from corresponding Bernoulli distribution
-  return (outcomes)
+  response <- rbern( n=sample_size, prob=Pr_success ) # draw from corresponding Bernoulli distribution
+  return (response)
 }
 
+## MAIN SIMULATION ##
 
-## TEST SCRIPT
+run_simulation <- function (input) { NULL }
+
+
+
+## TEST SCRIPT (For 30 January meeting)
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 setwd(path)
+
+# Load and separate Pointlogic source data
 source_data = read.csv("./cleaned_unified_sample.csv")
+true_fullsample_variables = separate_predictors_responses(source_data)
+subsamples = split_sample(source_data)
+true_target_variables = separate_predictors_responses(subsamples$target)
+
+# Load and manipulate simulated target population
 load("./simulated_target_population.RData")
-#simulated_population = simulated_population[1:1000,]
 constant = rep( 1, max(nrow(simulated_population), ncol(simulated_population)) )
-
-
 sim_target_variables = list()
 sim_target_variables$predictors = cbind(constant, simulated_population)
-subsamples = split_sample(source_data)
 
-target_sample = subsamples$target
-true_target_variables = create_predictors_responses(target_sample)
+# Fit KPI logits with true target data
 logit.target.familiarity <- glm( true_target_variables$familiarity
                                  ~ true_target_variables$predictors,
                                  family=binomial(link="logit") )
@@ -95,38 +92,35 @@ logit.target.consideration <- glm( true_target_variables$consideration
                                    ~ true_target_variables$predictors,
                                    family=binomial(link="logit") )
 
-sim_target_variables$familiarity = generate_outcomes(sim_target_variables$predictors,
+# Fit outcomes for simulated target sample
+sim_target_variables$familiarity = generate_response(sim_target_variables$predictors,
                                                      logit.target.familiarity$coefficients,
                                                      nrow(simulated_population))
-sim_target_variables$awareness = generate_outcomes(sim_target_variables$predictors,
+sim_target_variables$awareness = generate_response(sim_target_variables$predictors,
                                                    logit.target.awareness$coefficients,
                                                    nrow(simulated_population))
-sim_target_variables$consideration = generate_outcomes(sim_target_variables$predictors,
+sim_target_variables$consideration = generate_response(sim_target_variables$predictors,
                                                        logit.target.consideration$coefficients,
                                                        nrow(simulated_population))
 
-print( paste("True mean of familiarity:", mean(true_target_variables$familiarity)) )
-print( paste("True mean of awareness:", mean(true_target_variables$awareness)) )
-print( paste("True mean of consideration:", mean(true_target_variables$consideration)) )
+# Create dataframe to compare proportions where KPI = 1
+familiarity_means = c(mean(sim_target_variables$familiarity),
+                         mean(true_target_variables$familiarity),
+                         mean(true_fullsample_variables$familiarity))
+awareness_means = c(mean(sim_target_variables$awareness),
+                    mean(true_target_variables$awareness),
+                    mean(true_fullsample_variables$awareness))
+consideration_means = c(mean(sim_target_variables$consideration),
+                        mean(true_target_variables$consideration),
+                        mean(true_fullsample_variables$consideration))
+comparison_df = rename(data.frame(rbind(familiarity_means,
+                                        awareness_means,
+                                        consideration_means
+                                        )
+                                  ),
+                       "Sim. Targ" = X1,
+                       "True Targ" = X2,
+                       "True Full Smpl" = X3
+                       )
 
-print( paste("Simulated mean of familiarity:", mean(sim_target_variables$familiarity)) )
-print( paste("Simulated mean of awareness:", mean(sim_target_variables$awareness)) )
-print( paste("Simulated mean of consideration:", mean(sim_target_variables$consideration)) )
-
-
-
-
-
-
-## MAIN SIMULATION ##
-
-run_simulation <- function (N, Q) {
-  
-  
-  
-  targ_pred <- generate_predictors(N_targ, cat_prop_zero, cat_means, cat_sd, m_contact_corr)
-  
-}
-
-
-#Q = c(.1, .15, 2, .25, .3, .35, .4, .45, .5, .55, .6, .65, .7, .75, .8)
+round(comparison_df, 3)
