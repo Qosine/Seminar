@@ -49,6 +49,11 @@ separate_predictors_responses <- function(subsample) {
   return(out)
 }
 
+add_constant <- function(sample) {
+  constant = rep( 1, max(nrow(sample), ncol(sample)) )
+  return( cbind(constant, sample) )
+}
+
 ## DEPENDENT VARIABLES / OUTCOMES ##
 
 sigmoid_function <- function(x) 1/(1+exp(-x))
@@ -61,27 +66,24 @@ generate_response <- function(predictors, parameters, sample_size) {
 
 ## MAIN SIMULATION ##
 
-run_simulation <- function (input) { NULL }
-
-
-
-## TEST SCRIPT (For 30 January meeting)
+# Pathing
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 setwd(path)
 
 # Load and separate Pointlogic source data
 source_data = read.csv("./cleaned_unified_sample.csv")
+
+# Separate true data into predictors and responses
 true_fullsample_variables = separate_predictors_responses(source_data)
+
+# Split into true target and true non-target data
 subsamples = split_sample(source_data)
+
+# Separate predictors and responses for real data
 true_target_variables = separate_predictors_responses(subsamples$target)
+true_nontarget_variables = separate_predictors_responses(subsamples$nontarget)
 
-# Load and manipulate simulated target population
-load("./simulated_target_population.RData")
-constant = rep( 1, max(nrow(simulated_population), ncol(simulated_population)) )
-sim_target_variables = list()
-sim_target_variables$predictors = cbind(constant, simulated_population)
-
-# Fit KPI logits with true target data
+# Fit logit coefficients of the true target data
 logit.target.familiarity <- glm( true_target_variables$familiarity
                                  ~ true_target_variables$predictors,
                                  family=binomial(link="logit") )
@@ -92,7 +94,29 @@ logit.target.consideration <- glm( true_target_variables$consideration
                                    ~ true_target_variables$predictors,
                                    family=binomial(link="logit") )
 
-# Fit outcomes for simulated target sample
+# Fit logit coefficients of the true non-target data
+logit.nontarget.familiarity <- glm( true_nontarget_variables$familiarity
+                                 ~ true_nontarget_variables$predictors,
+                                 family=binomial(link="logit") )
+logit.nontarget.awareness <- glm( true_nontarget_variables$awareness
+                               ~ true_nontarget_variables$predictors,
+                               family=binomial(link="logit") )
+logit.nontarget.consideration <- glm( true_nontarget_variables$consideration
+                                   ~ true_nontarget_variables$predictors,
+                                   family=binomial(link="logit") )
+
+# Compute true betas
+
+
+
+###################### BELOW THIS LINE WILL GO IN SIMULATION FUNCTION
+
+
+# Simulated target group
+sim_target_variables = list()
+#   1) Separate predictors and responses for simulated (target) group
+sim_target_variables$predictors = add_constant(simulated_population)
+#   2) Fit outcomes
 sim_target_variables$familiarity = generate_response(sim_target_variables$predictors,
                                                      logit.target.familiarity$coefficients,
                                                      nrow(simulated_population))
@@ -103,24 +127,32 @@ sim_target_variables$consideration = generate_response(sim_target_variables$pred
                                                        logit.target.consideration$coefficients,
                                                        nrow(simulated_population))
 
-# Create dataframe to compare proportions where KPI = 1
-familiarity_means = c(mean(sim_target_variables$familiarity),
-                         mean(true_target_variables$familiarity),
-                         mean(true_fullsample_variables$familiarity))
-awareness_means = c(mean(sim_target_variables$awareness),
-                    mean(true_target_variables$awareness),
-                    mean(true_fullsample_variables$awareness))
-consideration_means = c(mean(sim_target_variables$consideration),
-                        mean(true_target_variables$consideration),
-                        mean(true_fullsample_variables$consideration))
-comparison_df = rename(data.frame(rbind(familiarity_means,
-                                        awareness_means,
-                                        consideration_means
-                                        )
-                                  ),
-                       "Sim. Targ" = X1,
-                       "True Targ" = X2,
-                       "True Full Smpl" = X3
-                       )
+# Create full sample of simulated targets and real data nontargets
+sim_fullsample_variables = list()
+sim_fullsample_variables$predictors = rbind(sim_target_variables$predictors,
+                                            true_nontarget_variables$predictors)
+sim_fullsample_variables$familiarity = append(sim_target_variables$familiarity,
+                                              true_nontarget_variables$familiarity)
+sim_fullsample_variables$awareness = append(sim_target_variables$awareness,
+                                            true_nontarget_variables$awareness)
+sim_fullsample_variables$consideration = append(sim_target_variables$consideration,
+                                                true_nontarget_variables$consideration)
+  
 
-round(comparison_df, 3)
+
+
+# Create nontarget subsample of appropriate size
+idx = sample(1:nrow(subsamples$nontarget),
+             (nrow(source_data)-nrow(simulated_population)) )
+true_nontarget_variables = separate_predictors_responses(subsamples$nontarget[idx,])
+true_nontarget_variables$predictors = add_constant(true_nontarget_variables$predictors)
+
+# Appending design matrix with interaction between predictors and target dummy
+interaction = rbind(unname(sim_target_variables$predictors),
+                    matrix(0,
+                           nrow(true_nontarget_variables$predictors),
+                           ncol(true_nontarget_variables$predictors)))
+
+sim_fullsample_variables$predictors = cbind(sim_fullsample_variables$predictors,
+                                            interaction)
+
