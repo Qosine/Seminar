@@ -8,7 +8,7 @@
 #               1) path             : Path of working directory
 #               2) population_size  : Desired population size
 #               3) seed             : Choice of seed (default 200127)
-#               4) target_audience  : Whether to simulate target or nontarget
+#       !!!        4) target_audience  : Whether to simulate target or nontarget
 #                                     population (boolean, default TRUE)
 #               5) target_gender_m  : Whether to set gender of target audience to male
 #                                     (default TRUE)
@@ -30,25 +30,30 @@ read_source_data <- function(path) {
 }
 
 split_sample <- function(data,
-                         target1_characteristics,
-                         target2_characteristics) {
+                         li_target1,
+                         li_target2) {
   
   # Target group 1
-  if (target1_characteristics$male==TRUE) {target_gender="male"}
+  if (li_target1$male==TRUE) {target_gender="male"}
+  else {target_gender="female"}
+
+  target1_sample = data[ ( data["sd_gender"]==target_gender
+                           & data["sd_age"]>=li_target1$min_age
+                           & data["sd_age"]<=li_target1$max_age ), ] 
+  
+  # Target group 2
+  if (li_target2$male==TRUE) {target_gender="male"}
   else {target_gender="female"}
   
-  target1_sample = data[ ( data["sd_gender"]==target_gender
-                           & data["sd_age"]>=target1_characteristics$min_age
-                           & data["sd_age"]<=target1_characteristics$max_age ), ] 
+  target2_sample = data[ ( data["sd_gender"]==target_gender
+                          & data["sd_age"]>=li_target2$min_age
+                          & data["sd_age"]<=li_target2$max_age ), ]
   
-  if (target_gender_m==TRUE) {target_gender="male"} else {target_gender="female"}
+  nontarget_sample = setdiff(data, target1_sample, target2_sample) ##!!
   
-  target_sample = data[ ( data["sd_gender"]==target_gender
-                          & data["sd_age"]>=min_age
-                          & data["sd_age"]<=max_age ), ]
-  nontarget_sample = setdiff(data, target_sample)
-  
-  out = list(); out$target = target_sample; out$nontarget = nontarget_sample
+  out = list(); 
+  out$target1 = target1_sample; out$target2 = target2_sample
+  out$nontarget = nontarget_sample
   
   return (out)
 }
@@ -116,5 +121,5 @@ simulate_population <- function(path,
                                       replacement)}
   return(population)
 }
-
+path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Data"
