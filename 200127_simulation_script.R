@@ -70,8 +70,11 @@ generate_response <- function(predictors, parameters, sample_size) {
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 setwd(path)
 
-# Load and separate Pointlogic source data
+# Load Pointlogic source data
 source_data = read.csv("./cleaned_unified_sample.csv")
+
+# Load simulated target population
+load("./simulated_target_population.RData")
 
 # Separate true data into predictors and responses
 true_fullsample_variables = separate_predictors_responses(source_data)
@@ -108,48 +111,116 @@ logit.nontarget.consideration <- glm( true_nontarget_variables$consideration
 ########## UP TO THIS NAME LINE, ALL PREDICTOR VARIABLE NAMES ARE PRESERVED
 ###################### BELOW THIS LINE WILL GO IN SIMULATION FUNCTION
 
+N = 7500
+Q = .60
+reps = 100
+familiarity_results = matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2)
+awareness_results = matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2)
+consideration_results = matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2)
 
-# Simulated target group
-sim_target_variables = list()
-#   1) Separate predictors and responses for simulated (target) group
-sim_target_variables$predictors = add_constant(simulated_population)
-#   2) Fit outcomes
-sim_target_variables$familiarity = generate_response(sim_target_variables$predictors,
-                                                     logit.target.familiarity$coefficients,
-                                                     nrow(simulated_population))
-sim_target_variables$awareness = generate_response(sim_target_variables$predictors,
-                                                   logit.target.awareness$coefficients,
-                                                   nrow(simulated_population))
-sim_target_variables$consideration = generate_response(sim_target_variables$predictors,
-                                                       logit.target.consideration$coefficients,
-                                                       nrow(simulated_population))
-
-# Create full sample of simulated targets and real data nontargets
-sim_fullsample_variables = list()
-sim_fullsample_variables$predictors = rbind(sim_target_variables$predictors,
-                                            true_nontarget_variables$predictors)
-sim_fullsample_variables$familiarity = append(sim_target_variables$familiarity,
-                                              true_nontarget_variables$familiarity)
-sim_fullsample_variables$awareness = append(sim_target_variables$awareness,
-                                            true_nontarget_variables$awareness)
-sim_fullsample_variables$consideration = append(sim_target_variables$consideration,
-                                                true_nontarget_variables$consideration)
+for (i in 1:reps) {
+  idx_rs_targets = sample( 1:nrow(simulated_population), N*Q )
+  idx_rs_nontargets = sample( 1:nrow(subsamples$nontarget), (N*(1-Q)) )
   
+  rs_targets = list()
+  rs_targets$predictors = simulated_population[idx_rs_targets,]
+  rs_targets$predictors = add_constant(rs_targets$predictors)
+  rs_targets$familiarity = generate_response(rs_targets$predictors,
+                                   logit.target.familiarity$coefficients,
+                                   N*Q)
+  rs_targets$awareness = generate_response(rs_targets$predictors,
+                                             logit.target.awareness$coefficients,
+                                             N*Q)
+  rs_targets$consideration = generate_response(rs_targets$predictors,
+                                             logit.target.consideration$coefficients,
+                                             N*Q)
+  
+  
+  rs_nontargets = separate_predictors_responses(subsamples$nontarget[idx_rs_nontargets,])
+  rs_nontargets$predictors = add_constant(rs_nontargets$predictors)
+  
+  full_sample = list()
+  full_sample$predictors = rbind(rs_targets$predictors,
+                                 rs_nontargets$predictors)
+  interaction = rbind(rs_targets$predictors,
+                      matrix(0, nrow(rs_nontargets$predictors), ncol(rs_nontargets$predictors)))
+  full_sample$predictors = cbind(full_sample$predictors, interaction)
+  full_sample$familiarity = append(rs_targets$familiarity,
+                                   rs_nontargets$familiarity)
+  full_sample$awareness = append(rs_targets$awareness,
+                                 rs_nontargets$awareness)
+  full_sample$consideration = append(rs_targets$consideration,
+                                     rs_nontargets$consideration)
+  
+  logit.simulation.familiarity <- glm(full_sample$familiarity
+                                      ~ 0 + full_sample$predictors,
+                                      family = binomial(link="logit"))
+  logit.simulation.awareness <- glm(full_sample$awareness
+                                      ~ 0 + full_sample$predictors,
+                                      family = binomial(link="logit"))
+  logit.simulation.consideration <- glm(full_sample$consideration
+                                      ~ 0 + full_sample$predictors,
+                                      family = binomial(link="logit"))
+  
+  coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
+                        "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
+                        "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
+  
+  names(logit.simulation.familiarity$coefficients) = coefficient_names
+  names(logit.simulation.awareness$coefficients) = coefficient_names
+  names(logit.simulation.consideration$coefficients) = coefficient_names
+  
+  familiarity_results[i,] = logit.simulation.familiarity$coefficients
+  awareness_results[i,] = logit.simulation.awareness$coefficients
+  consideration_results[i,] = logit.simulation.consideration$coefficients
+  
+  if (i %% 100 == 0){
+    print(paste("Currently at iteration:", i))
+  }
+  
+}
 
-
-
-# Create nontarget subsample of appropriate size
-idx = sample(1:nrow(subsamples$nontarget),
-             (nrow(source_data)-nrow(simulated_population)) )
-true_nontarget_variables = separate_predictors_responses(subsamples$nontarget[idx,])
-true_nontarget_variables$predictors = add_constant(true_nontarget_variables$predictors)
-
-# Appending design matrix with interaction between predictors and target dummy
-interaction = rbind(unname(sim_target_variables$predictors),
-                    matrix(0,
-                           nrow(true_nontarget_variables$predictors),
-                           ncol(true_nontarget_variables$predictors)))
-
-sim_fullsample_variables$predictors = cbind(sim_fullsample_variables$predictors,
-                                            interaction)
-
+# # Simulated target group
+# sim_target_variables = list()
+# #   1) Separate predictors and responses for simulated (target) group
+# sim_target_variables$predictors = add_constant(simulated_population)
+# #   2) Fit outcomes
+# sim_target_variables$familiarity = generate_response(sim_target_variables$predictors,
+#                                                      logit.target.familiarity$coefficients,
+#                                                      nrow(simulated_population))
+# sim_target_variables$awareness = generate_response(sim_target_variables$predictors,
+#                                                    logit.target.awareness$coefficients,
+#                                                    nrow(simulated_population))
+# sim_target_variables$consideration = generate_response(sim_target_variables$predictors,
+#                                                        logit.target.consideration$coefficients,
+#                                                        nrow(simulated_population))
+# 
+# # Create full sample of simulated targets and real data nontargets
+# sim_fullsample_variables = list()
+# sim_fullsample_variables$predictors = rbind(sim_target_variables$predictors,
+#                                             true_nontarget_variables$predictors)
+# sim_fullsample_variables$familiarity = append(sim_target_variables$familiarity,
+#                                               true_nontarget_variables$familiarity)
+# sim_fullsample_variables$awareness = append(sim_target_variables$awareness,
+#                                             true_nontarget_variables$awareness)
+# sim_fullsample_variables$consideration = append(sim_target_variables$consideration,
+#                                                 true_nontarget_variables$consideration)
+#   
+# 
+# 
+# 
+# # Create nontarget subsample of appropriate size
+# idx = sample(1:nrow(subsamples$nontarget),
+#              (nrow(source_data)-nrow(simulated_population)) )
+# true_nontarget_variables = separate_predictors_responses(subsamples$nontarget[idx,])
+# true_nontarget_variables$predictors = add_constant(true_nontarget_variables$predictors)
+# 
+# # Appending design matrix with interaction between predictors and target dummy
+# interaction = rbind(unname(sim_target_variables$predictors),
+#                     matrix(0,
+#                            nrow(true_nontarget_variables$predictors),
+#                            ncol(true_nontarget_variables$predictors)))
+# 
+# sim_fullsample_variables$predictors = cbind(sim_fullsample_variables$predictors,
+#                                             interaction)
+# 

@@ -42,12 +42,12 @@ split_sample <- function(data,
                            & data["sd_age"]<=li_target1$max_age ), ] 
   
   # Target group 2
-  if (li_target2$male==TRUE) {target_gender="male"}
-  else {target_gender="female"}
-  
-  target2_sample = data[ ( data["sd_gender"]==target_gender
-                          & data["sd_age"]>=li_target2$min_age
-                          & data["sd_age"]<=li_target2$max_age ), ]
+  if ( !is.null(li_target2) ) {
+    if (li_target2$male==TRUE) {target_gender="male"} else {target_gender="female"}
+    target2_sample = data[ ( data["sd_gender"]==target_gender
+                            & data["sd_age"]>=li_target2$min_age
+                            & data["sd_age"]<=li_target2$max_age ), ]
+  } else {target2_sample = NULL}
   
   nontarget_sample = setdiff(data, target1_sample, target2_sample) ##!!
   
@@ -83,6 +83,8 @@ draw_new_samples <- function(original_data,
                              user_replace_choice = FALSE) {
   
   population = matrix( 0, population_size, ncol(original_data) ) # Allocate memory
+  colnames(population) = c("v_audiosum", "v_digitalsum", "v_programsum",
+                           "v_tvsum", "v_vodsum", "v_yousum" )
   
   # Permute columns independently
   for( i in 1:ncol(original_data) ) {
@@ -98,17 +100,28 @@ draw_new_samples <- function(original_data,
 simulate_population <- function(path,
                                 population_size,
                                 seed = 200127,
-                                target_audience = TRUE,
-                                target_gender_m=TRUE,
-                                min_age=25,
-                                max_age=34,
+                                target_audience=TRUE,
+                                target1_gender_m=TRUE,
+                                target1_min_age=25,
+                                target1_max_age=34,
+                                target2_gender_m=NULL,
+                                target2_min_age=NULL,
+                                target2_max_age=NULL,
                                 replacement=TRUE) {
   
   data = read_source_data(path)
-  subsamples = split_sample(data,
-                            target_gender_m,
-                            min_age,
-                            max_age)
+  li_target1 = list(); li_target1$male = target1_gender_m
+  li_target1$min_age = target1_min_age; li_target1$max_age = target1_max_age
+  
+  li_target2 = NULL
+  if(!all( sapply(list(target2_gender_m,
+                       target2_min_age,
+                       target2_max_age), is.null ))) {
+    li_target2 = list(); li_target2$male = target2_gender_m
+    li_target2$min_age = target2_min_age; li_target2$max_age = target2_max_age
+  }
+  
+  subsamples = split_sample(data, li_target1, li_target2)
   
   target_contacts = sum_contact_vars(subsamples$target)
   nontarget_contacts = sum_contact_vars(subsamples$nontarget)
@@ -123,3 +136,5 @@ simulate_population <- function(path,
 }
 path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Data"
+simulated_population = simulate_population(path, 50000)
+rm(list=setdiff(ls(), "simulated_population"))
