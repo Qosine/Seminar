@@ -64,6 +64,11 @@ generate_response <- function(predictors, parameters, sample_size) {
   return (response)
 }
 
+## EVALUATION ##
+
+RMSE <- function(y, yhat) {(mean((y - yhat)^2))^.5}
+Bias <- function(beta_true, beta_hat) {mean(beta_hat) - beta_true}
+
 ## MAIN SIMULATION ##
 
 # Pathing
@@ -72,9 +77,6 @@ setwd(path)
 
 # Load Pointlogic source data
 source_data = read.csv("./cleaned_unified_sample.csv")
-
-# Load simulated target population
-load("./simulated_target_population.RData")
 
 # Separate true data into predictors and responses
 true_fullsample_variables = separate_predictors_responses(source_data)
@@ -97,6 +99,7 @@ logit.target.consideration <- glm( true_target_variables$consideration
                                    ~ true_target_variables$predictors,
                                    family=binomial(link="logit") )
 
+
 # Fit logit coefficients of the true non-target data
 logit.nontarget.familiarity <- glm( true_nontarget_variables$familiarity
                                  ~ true_nontarget_variables$predictors,
@@ -108,43 +111,64 @@ logit.nontarget.consideration <- glm( true_nontarget_variables$consideration
                                    ~ true_nontarget_variables$predictors,
                                    family=binomial(link="logit") )
 
-########## UP TO THIS NAME LINE, ALL PREDICTOR VARIABLE NAMES ARE PRESERVED
+
+# Load simulated target population, add column for constant and generate responses
+load("./simulated_target_predictors.RData")
+simulated_population = list()
+simulated_population$predictors = add_constant(simulated_target_predictors)
+simulated_population$familiarity = generate_response(simulated_population$predictors,
+                                                     logit.target.familiarity$coefficients,
+                                                     nrow(simulated_population$predictors) )
+simulated_population$awareness = generate_response(simulated_population$predictors,
+                                                   logit.target.awareness$coefficients,
+                                                   nrow(simulated_population$predictors) )
+simulated_population$consideration = generate_response(simulated_population$predictors,
+                                                       logit.target.consideration$coefficients,
+                                                       nrow(simulated_population$predictors) )
+
 ###################### BELOW THIS LINE WILL GO IN SIMULATION FUNCTION
 
+# Set simulation hyperparameters
 N = 7500
 Q = .60
-reps = 100
-familiarity_results = matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2)
-awareness_results = matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2)
-consideration_results = matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2)
+reps = 1000
+
+# Allocate memory for simulation results
+familiarity_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+awareness_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+consideration_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+
+# Name columns of results df
+coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
+                      "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
+                      "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
+colnames(familiarity_results) = coefficient_names
+colnames(awareness_results) = coefficient_names
+colnames(consideration_results) = coefficient_names
+
+
 
 for (i in 1:reps) {
-  idx_rs_targets = sample( 1:nrow(simulated_population), N*Q )
+  
+  # Create index of random samples for target and non-target data
+  idx_rs_targets = sample( 1:nrow(simulated_population$predictors), N*Q )
   idx_rs_nontargets = sample( 1:nrow(subsamples$nontarget), (N*(1-Q)) )
   
+  # Compile random sample of targets
   rs_targets = list()
-  rs_targets$predictors = simulated_population[idx_rs_targets,]
-  rs_targets$predictors = add_constant(rs_targets$predictors)
-  rs_targets$familiarity = generate_response(rs_targets$predictors,
-                                   logit.target.familiarity$coefficients,
-                                   N*Q)
-  rs_targets$awareness = generate_response(rs_targets$predictors,
-                                             logit.target.awareness$coefficients,
-                                             N*Q)
-  rs_targets$consideration = generate_response(rs_targets$predictors,
-                                             logit.target.consideration$coefficients,
-                                             N*Q)
+  rs_targets$predictors = simulated_population$predictors[idx_rs_targets,]
+  rs_targets$familiarity = simulated_population$familiarity[idx_rs_targets]
+  rs_targets$awareness = simulated_population$awareness[idx_rs_targets]
+  rs_targets$consideration = simulated_population$consideration[idx_rs_targets]
   
-  
+  # Compile random sample of nontargets (need to manually add constant still)
   rs_nontargets = separate_predictors_responses(subsamples$nontarget[idx_rs_nontargets,])
   rs_nontargets$predictors = add_constant(rs_nontargets$predictors)
   
+  # Combine the target and non-target data into a single matrix
   full_sample = list()
   full_sample$predictors = rbind(rs_targets$predictors,
                                  rs_nontargets$predictors)
-  interaction = rbind(rs_targets$predictors,
-                      matrix(0, nrow(rs_nontargets$predictors), ncol(rs_nontargets$predictors)))
-  full_sample$predictors = cbind(full_sample$predictors, interaction)
   full_sample$familiarity = append(rs_targets$familiarity,
                                    rs_nontargets$familiarity)
   full_sample$awareness = append(rs_targets$awareness,
@@ -152,6 +176,16 @@ for (i in 1:reps) {
   full_sample$consideration = append(rs_targets$consideration,
                                      rs_nontargets$consideration)
   
+  # To include target-group specific parameters we need to augment the design matrix
+  # We do this by adding interaction variables. For the target sample this means
+  # keeping the original data, for the non-target sample we must replace by zero
+  interaction = rbind(rs_targets$predictors,
+                      matrix(0,
+                             nrow(rs_nontargets$predictors),
+                             ncol(rs_nontargets$predictors)))
+  full_sample$predictors = cbind(full_sample$predictors, interaction)
+  
+  # Fit models for the full dataset
   logit.simulation.familiarity <- glm(full_sample$familiarity
                                       ~ 0 + full_sample$predictors,
                                       family = binomial(link="logit"))
@@ -162,23 +196,33 @@ for (i in 1:reps) {
                                       ~ 0 + full_sample$predictors,
                                       family = binomial(link="logit"))
   
-  coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
-                        "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
-                        "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
-  
-  names(logit.simulation.familiarity$coefficients) = coefficient_names
-  names(logit.simulation.awareness$coefficients) = coefficient_names
-  names(logit.simulation.consideration$coefficients) = coefficient_names
-  
+  # Store results of current run
   familiarity_results[i,] = logit.simulation.familiarity$coefficients
   awareness_results[i,] = logit.simulation.awareness$coefficients
   consideration_results[i,] = logit.simulation.consideration$coefficients
   
-  if (i %% 100 == 0){
-    print(paste("Currently at iteration:", i))
-  }
+  # Keep track of which simulation run we are in
+  if (i %% 100 == 0) { print(paste("Currently at iteration:", i)) }
   
 }
+
+
+
+
+familiarity_results_target = familiarity_results[,1:7] + familiarity_results[,8:14]
+awareness_results_target = awareness_results[,1:7] + awareness_results[,8:14]
+consideration_results_target = consideration_results[,1:7] + consideration_results[,8:14]
+
+(abs(logit.target.familiarity$coefficients - colMeans(familiarity_results_target) ))/logit.target.familiarity$coefficients
+abs(logit.target.awareness$coefficients - colMeans(awareness_results_target) )
+abs(logit.target.consideration$coefficients - colMeans(consideration_results_target) )
+
+
+abs(logit.nontarget.familiarity$coefficients - colMeans(familiarity_results[,1:7]))/logit.nontarget.familiarity$coefficients
+
+
+colMeans(consideration_results_target)
+
 
 # # Simulated target group
 # sim_target_variables = list()
