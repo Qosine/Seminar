@@ -105,10 +105,7 @@ logit.nontarget.consideration <- glm( true_nontarget_variables$consideration
                                    ~ true_nontarget_variables$predictors,
                                    family=binomial(link="logit") )
 
-# Compute true betas
-
-
-
+########## UP TO THIS NAME LINE, ALL PREDICTOR VARIABLE NAMES ARE PRESERVED
 ###################### BELOW THIS LINE WILL GO IN SIMULATION FUNCTION
 
 
