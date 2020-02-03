@@ -2,6 +2,7 @@ set.seed(200127)
 library(mvtnorm)
 library(simcausal)
 library(dplyr)
+library(survey)
 
 ## SETUP ##
 split_sample <- function(data,
@@ -54,8 +55,11 @@ add_constant <- function(sample) {
   return( cbind(constant, sample) )
 }
 
-## DEPENDENT VARIABLES / OUTCOMES ##
+rename_interaction_columns <- function(column_names) {
+  return( paste("ia", column_names, sep="_"))
+}
 
+## DEPENDENT VARIABLES / OUTCOMES ##
 sigmoid_function <- function(x) 1/(1+exp(-x))
 
 generate_response <- function(predictors, parameters, sample_size) {
@@ -64,12 +68,42 @@ generate_response <- function(predictors, parameters, sample_size) {
   return (response)
 }
 
+## WEIGHTS ##
+compute_weights <- function(target_sample_proportion,
+                            target_CPS_proportion,
+                            no_target_obs,
+                            no_nontarget_obs){
+  
+  target_weight = target_sample_proportion/target_CPS_proportion
+  nontarget_weight = (1-target_sample_proportion)/(1-target_CPS_proportion)
+  weights = append(rep(target_weight, no_target_obs),
+                   rep(nontarget_weight, no_nontarget_obs) )
+  return(weights)
+}
+
+## SURVEY RELATION ##
+create_svyglm_inputs <- function(predictors,
+                                 response,
+                                 intercept_included=TRUE) {
+  data = data.frame(cbind(response, predictors))
+  predictor_names = paste(colnames(predictors), collapse = " + ")
+  if (intercept_included==TRUE) {
+    func = paste(deparse(substitute(response)), "~ 0 +", predictor_names)
+  }
+  else {func = paste(deparse(substitute(response)), "~", predictor_names)}
+  
+  
+  out = list(); out$data = data; out$func = func
+  return(out)
+}
+
 ## EVALUATION ##
 
 RMSE <- function(y, yhat) {(mean((y - yhat)^2))^.5}
 Bias <- function(beta_true, beta_hat) {mean(beta_hat) - beta_true}
 
-## MAIN SIMULATION ##
+
+## FITTING TRUE MODELS ##
 
 # Pathing
 path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
@@ -112,9 +146,17 @@ logit.nontarget.consideration <- glm( true_nontarget_variables$consideration
                                    ~ true_nontarget_variables$predictors,
                                    family=binomial(link="logit") )
 
+# CPS weights
+CPS <- rbind.data.frame(c(0.203195,0.10298,0.100214),
+                        c(0.185959,0.092719,0.09324),
+                        c(0.186438,0.091954,0.094484),
+                        c(0.424408,0.195766,0.228643))
+colnames(CPS) = c("Total", "Male", "Female")
+rownames(CPS) = c("25-34", "35-44", "45-55", "55+")
+
 
 # Load simulated target population, add column for constant and generate responses
-load("/simulated_target_predictors.RData")
+load("./simulated_target_predictors.RData")
 simulated_population = list()
 simulated_population$predictors = add_constant(simulated_target_predictors)
 simulated_population$familiarity = generate_response(simulated_population$predictors,
@@ -127,26 +169,24 @@ simulated_population$consideration = generate_response(simulated_population$pred
                                                        logit.target.consideration$coefficients,
                                                        nrow(simulated_population$predictors) )
 
+# Set simulation hyperparameters
+N = 7500
+Q = .60
+reps = 400
+
 ###################### RUN SIMULATION FUNCTION
-run_simulation <- function(){
-  # Set simulation hyperparameters
-  N = 7500
-  Q = .90
-  reps = 400
+run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-34"){
   
   # Allocate memory for simulation results
-  familiarity_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
-  awareness_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
-  consideration_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+  unweighted_logit_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+  weighted_logit_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
   
   # Name columns of results df
   coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
                         "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
                         "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
-  colnames(familiarity_results) = coefficient_names
-  colnames(awareness_results) = coefficient_names
-  colnames(consideration_results) = coefficient_names
-  
+  colnames(unweighted_logit_results) = coefficient_names
+  colnames(weighted_logit_results) = coefficient_names
   
   
   for (i in 1:reps) {
@@ -177,6 +217,13 @@ run_simulation <- function(){
     full_sample$consideration = append(rs_targets$consideration,
                                        rs_nontargets$consideration)
     
+    # Compute weights
+    #target_CPS_weight = CPS[target_gender, target_age]
+    weights = compute_weights(Q,
+                              CPS["25-34", "Male"],
+                              nrow(rs_targets$predictors),
+                              nrow(rs_nontargets$predictors))
+    
     # To include target-group specific parameters we need to augment the design matrix
     # We do this by adding interaction variables. For the target sample this means
     # keeping the original data, for the non-target sample we must replace by zero
@@ -184,32 +231,34 @@ run_simulation <- function(){
                         matrix(0,
                                nrow(rs_nontargets$predictors),
                                ncol(rs_nontargets$predictors)))
+    colnames(interaction) = rename_interaction_columns(colnames(interaction))
     full_sample$predictors = cbind(full_sample$predictors, interaction)
     
-    # Fit models for the full dataset
-    logit.simulation.familiarity <- glm(full_sample$familiarity
-                                        ~ 0 + full_sample$predictors,
-                                        family = binomial(link="logit"))
-    logit.simulation.awareness <- glm(full_sample$awareness
-                                        ~ 0 + full_sample$predictors,
-                                        family = binomial(link="logit"))
-    logit.simulation.consideration <- glm(full_sample$consideration
+    # Fit regular logit
+    logit.simulation.unweighted <- glm(full_sample$familiarity
                                         ~ 0 + full_sample$predictors,
                                         family = binomial(link="logit"))
     
+    # Fit weighted logit
+    svy_inputs = create_svyglm_inputs(full_sample$predictors, full_sample$familiarity)
+    design_func <- svydesign(id = ~1,
+                             data = svy_inputs$data,
+                             weight = weights)
+    logit.simulation.weighted <- svyglm(formula = svy_inputs$func,
+                                        design =  design_func,
+                                        family = "quasibinomial")
+    
     # Store results of current run
-    familiarity_results[i,] = logit.simulation.familiarity$coefficients
-    awareness_results[i,] = logit.simulation.awareness$coefficients
-    consideration_results[i,] = logit.simulation.consideration$coefficients
+    unweighted_logit_results[i,] = logit.simulation.unweighted$coefficients
+    weighted_results[i,] = logit.simulation.weighted$coefficients
     
     # Keep track of which simulation run we are in
     if (i %% 100 == 0) { print(paste("Currently at iteration:", i)) }
     
   }
   li_results = list()
-  li_results$fam <- familiarity_results
-  li_results$awa <- awareness_results
-  li_results$con <- consideration_results
+  li_results$unweighted <- unweighted_logit_results
+  li_results$weighted <- weighted_logit_results
   return(li_results)
 }
 
@@ -243,7 +292,7 @@ rejection_percentage_true_pars()
 
 ## Function that will output the percentage of true parameter rejections of the simulation
 rejection_percentage_true_pars <- function(results=li_results, true_parameter_estimate = ){
-  target_parameters = colmeans(li_results$ )
+  target_parameters = colmeans(li_results$)
     rej_count=0
   for(i in nrow(target)){
     p_val_ttest = t.test(target ,alternative = "two.sided",mu=true_parameter_estimate)$p.value
