@@ -74,8 +74,8 @@ compute_weights <- function(target_sample_proportion,
                             no_target_obs,
                             no_nontarget_obs){
   
-  target_weight = target_sample_proportion/target_CPS_proportion
-  nontarget_weight = (1-target_sample_proportion)/(1-target_CPS_proportion)
+  target_weight = target_CPS_proportion/target_sample_proportion
+  nontarget_weight = (1-target_CPS_proportion)/(1-target_sample_proportion)
   weights = append(rep(target_weight, no_target_obs),
                    rep(nontarget_weight, no_nontarget_obs) )
   return(weights)
@@ -171,7 +171,7 @@ simulated_population$consideration = generate_response(simulated_population$pred
 
 # Set simulation hyperparameters
 N = 7500
-Q = .60
+Q = .80
 reps = 400
 
 ###################### RUN SIMULATION FUNCTION
