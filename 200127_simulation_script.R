@@ -302,6 +302,67 @@ rejection_percentage_true_pars <- function(results=li_results, true_parameter_es
 }
 
 }
+
+
+#plot for procentual hit rate for weighted and unweighted glm and estimator plots
+plot_weighted <- matrix(data = 0, nrow=100, ncol = 7)
+plot_unweighted <- matrix(data = 0, nrow=100, ncol = 7)
+N=7500
+pred_unweighted <- vector()
+pred_weighted <- vector()
+pred_weighted_target <- vector()
+strat <- ifelse(source_data$sd_age <=34 & source_data$sd_age >=25 & source_data$sd_gender == "male", 1,0)
+for(i in 1:100){
+  Q = i/100 # is percent target audience
+
+  idx_rs_targets = sample( 1:nrow(simulated_population$predictors), N*Q )
+  idx_rs_nontargets = sample( 1:nrow(subsamples$nontarget), (N*(1-Q)) )
+  rs_targets$predictors = simulated_population$predictors[idx_rs_targets,]
+  rs_targets$familiarity = simulated_population$familiarity[idx_rs_targets]
+  rs_targets$awareness = simulated_population$awareness[idx_rs_targets]
+  rs_targets$consideration = simulated_population$consideration[idx_rs_targets]
+  rs_nontargets = separate_predictors_responses(subsamples$nontarget[idx_rs_nontargets,])
+  rs_nontargets$predictors = add_constant(rs_nontargets$predictors)
+  full_sample$predictors = rbind(rs_targets$predictors[,2:7],
+                                 rs_nontargets$predictors[,2:7])
+  full_sample$familiarity = append(rs_targets$familiarity,
+                                   rs_nontargets$familiarity)
+  full_sample$awareness = append(rs_targets$awareness,
+                                 rs_nontargets$awareness)
+  full_sample$consideration = append(rs_targets$consideration,
+                                     rs_nontargets$consideration)
+  weights = compute_weights(Q,
+                            CPS["25-34", "Male"],
+                            nrow(rs_targets$predictors),
+                            nrow(rs_nontargets$predictors))
+  
+  # Fit regular logit
+  logit.simulation.unweighted <- glm(full_sample$awareness
+                                     ~ full_sample$predictors,
+                                     family = binomial(link="logit"))
+  
+  # Fit weighted logit
+  svy_inputs = create_svyglm_inputs(full_sample$predictors, full_sample$awareness)
+  design_func <- svydesign(id = ~1,
+                           data = svy_inputs$data,
+                           weight = weights)
+  logit.simulation.weighted <- svyglm(formula = svy_inputs$func,
+                                      design =  design_func,
+                                      family = "quasibinomial")
+  pred_weighted[i] <- sum(ifelse(true_fullsample_variables$awareness == ifelse(predict.glm(logit.simulation.weighted, newdata=as.data.frame(true_fullsample_variables$predictors))>=.5,1,0),1,0))/N
+  pred_weighted_target[i] <- sum(ifelse(subset(true_fullsample_variables$awareness, strat==1) == ifelse(predict.glm(logit.simulation.weighted, newdata=as.data.frame(subset(true_fullsample_variables$predictors,strat == 1)))>=.5,1,0),1,0))/791
+  pred_unweighted[i] <- sum(ifelse(true_fullsample_variables$awareness == ifelse(predict.glm(logit.simulation.unweighted, newdata=as.data.frame(true_fullsample_variables$predictors))>=.5,1,0),1,0))/N
+  #pred_weighted_target[i] <- sum(ifelse(full_sample$familiarity == ifelse(predict.glm(logit.simulation.weighted)>=.5,1,0),1,0))/(Q*N)
+  #pred_weighted_nontarget[i] <- sum(ifelse(full_sample$familiarity == ifelse(predict.glm(logit.simulation.weighted)>=.5,1,0),1,0))/((1-Q)*N)
+  #pred_weighted_nontarget[i] <- sum(ifelse(full_sample$familiarity == ifelse(predict.glm(logit.simulation.weighted)>=.5,1,0),1,0))/((1-Q)*N)
+    
+  #plot_unweighted[i,] = t(unname(logit.simulation.unweighted$coefficients))
+  #plot_weighted[i,] = t(unname(logit.simulation.weighted$coefficients))
+}
+plot(cbind(c(1:100),pred_unweighted))
+plot(cbind(c(1:100),pred_weighted))
+plot(cbind(c(1:100),pred_weighted_target))
+
 # # Simulated target group
 # sim_target_variables = list()
 # #   1) Separate predictors and responses for simulated (target) group
