@@ -89,8 +89,9 @@ create_svyglm_inputs <- function(predictors,
   predictor_names = paste(colnames(predictors), collapse = " + ")
   if (intercept_included==TRUE) {
     func = paste("response ~ 0 +", predictor_names)
+  } else {
+    func = paste("response ~", predictor_names)
   }
-  else {func = paste(deparse(substitute(response)), "~", predictor_names)}
   
   
   out = list(); out$data = data; out$func = func
