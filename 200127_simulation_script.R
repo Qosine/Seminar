@@ -287,9 +287,7 @@ for(N_s in 1:3){
 }
 colnames(test) <- c(2500,5000,7500)
 rownames(test) <- c(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
-for( i in 1:12){
-  print(paste(median(test[[i]])))
-}
+
 
 test = run_simulation(N,Q,reps)
 
