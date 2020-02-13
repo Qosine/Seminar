@@ -112,13 +112,12 @@ compute_population_params <- function(target_gender = "Male", target_age = "25-3
 }
 
 # Pathing
-path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
-path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
-setwd(path)
-
+#path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
+#path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
+#setwd(path)()
 # Load Pointlogic source data
+setwd("C:/Users/marcs/OneDrive/Bureaublad/Master/Seminar")
 source_data = read.csv("./cleaned_unified_sample.csv")
-
 # Separate true data into predictors and responses
 true_fullsample_variables = separate_predictors_responses(source_data)
 
@@ -152,7 +151,7 @@ logit.nontarget.consideration <- glm( true_nontarget_variables$consideration
                                       ~ true_nontarget_variables$predictors,
                                       family=binomial(link="logit") )
 
-true_population_params = compute_population_params()
+
 
 # CPS weights
 CPS <- rbind.data.frame(c(0.203195,0.10298,0.100214),
@@ -161,7 +160,7 @@ CPS <- rbind.data.frame(c(0.203195,0.10298,0.100214),
                         c(0.424408,0.195766,0.228643))
 colnames(CPS) = c("Total", "Male", "Female")
 rownames(CPS) = c("25-34", "35-44", "45-55", "55+")
-
+true_population_params = compute_population_params()
 
 # Load simulated target population, add column for constant and generate responses
 load("./simulated_target_predictors.RData")
@@ -183,6 +182,22 @@ Q = .80
 reps = 100
 
 ###################### RUN SIMULATION FUNCTION
+run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-34"){
+  
+  # Allocate memory for simulation results
+  unweighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
+  weighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
+  unweighted_subsample_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+  anova_results = vector()
+  
+  # Name columns of results df
+  coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
+                        "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
+                        "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
+  colnames(unweighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
+  colnames(weighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
+  colnames(unweighted_subsample_results) = coefficient_names
+  
   for (i in 1:reps) {
     
     # Create index of random samples for target and non-target data
@@ -262,7 +277,7 @@ reps = 100
     unweighted_population_results[i,] = logit.sim.no_interact.unweighted$coefficients
     weighted_population_results[i,] = logit.sim.no_interact.weighted$coefficients
     unweighted_subsample_results[i,] = logit.sim.interact.unweighted$coefficients
-    anova_results[i] <- anova(logit.sim.no_interact.weighted,method = "Wald")$p
+    anova_results[i] <- anova(logit.sim.no_interact.weighted,logit.sim.interact.weighted,method = "Wald")$p
     
     # Keep track of which simulation run we are in
     if (i%%100 == 0) { print(paste("Currently at iteration:", i)) }
@@ -276,20 +291,30 @@ reps = 100
   return(li_results)
 }
 
-test<-matrix(data=0,nrow = 9,ncol = 3)
+
+test<-matrix(data=0,nrow = 19,ncol = 4)
 reps=50
-for(N_s in 1:3){
-  N_s2 = N_s*2500
-  for(l in 1:9){
-    R=l/10
-    test[l,N_s] <- sum(ifelse((run_simulation(1000,0.9,reps, target_gender = "Male", target_age = "55+")$anova_results<0.05) == FALSE,1,0))/reps
+for(N_s in 1:4){
+  N_s2 = 2000 + N_s*250
+  for(l in 1:19){
+    R=l/20
+    test[l,N_s] <- sum(ifelse((run_simulation(N_s2,R,reps, target_gender = "Male", target_age = "25-34")$anova_results<0.05) == FALSE,1,0))/reps
   }
 }
-colnames(test) <- c(2500,5000,7500)
-rownames(test) <- c(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
+colnames(test) <- c(2500,5000,7500,9000)
+rownames(test) <- c(0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95)
+
+test2 <- cbind(c(0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95),test)
+colnames(test2) <- c("aud_rate","N2500","N5000","N7500", "N900")
+
+ggplot(as.data.frame(test2), aes(x=aud_rate, y=Observations)) + 
+  geom_line(aes(y = N2500, color = "red"),show.legend= TRUE) + 
+  geom_line(aes(y = N5000, color="blue"),show.legend= TRUE) +
+  geom_line(aes(y = N7500, color="yellow"),show.legend= TRUE) +
+  geom_line(aes(y = N9000, color="green"),show.legend= TRUE) +
+  scale_color_discrete(name = "Rejection rate", labels = c("2000", "1000", "3000"))
 
 
-test = run_simulation(N,Q,reps)
 
 output_results <- function(li_results){
   familiarity_results <-li_results$fam
@@ -314,14 +339,14 @@ output_results <- function(li_results){
 }
 
 #run sim & output results:
-li_results <- run_simulation()
-output_results(li_results)
-rejection_percentage_true_pars()
+#li_results <- run_simulation()
+#output_results(li_results)
+#rejection_percentage_true_pars()
 
 
 ## Function that will output the percentage of true parameter rejections of the simulation
 rejection_percentage_true_pars <- function(results=li_results, true_parameter_estimate = ){
-  target_parameters = colmeans(li_results$)
+  target_parameters = apply(li_results,p, mean)
   rej_count=0
   for(i in nrow(target)){
     p_val_ttest = t.test(target ,alternative = "two.sided",mu=true_parameter_estimate)$p.value
