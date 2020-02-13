@@ -183,6 +183,21 @@ Q = .80
 reps = 100
 
 ###################### RUN SIMULATION FUNCTION
+run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-34"){
+  
+  # Allocate memory for simulation results
+  unweighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
+  weighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
+  unweighted_subsample_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+  
+  # Name columns of results df
+  coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
+                        "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
+                        "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
+  colnames(unweighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
+  colnames(weighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
+  colnames(unweighted_subsample_results) = coefficient_names
+  
   for (i in 1:reps) {
     
     # Create index of random samples for target and non-target data
@@ -244,15 +259,6 @@ reps = 100
                                              design =  design_func,
                                              family = "quasibinomial")
     
-    # Fit weighted logit for model with interactions
-    svy_inputs = create_svyglm_inputs(full_sample_w_interact$predictors, full_sample$consideration)
-    design_func <- svydesign(id = ~1,
-                             data = svy_inputs$data,
-                             weight = weights)
-    logit.sim.interact.weighted <- svyglm(formula = svy_inputs$func,
-                                             design =  design_func,
-                                             family = "quasibinomial")
-    
     # Fit unweighted logit for model with interactions
     logit.sim.interact.unweighted <-  glm(full_sample_w_interact$consideration
                                           ~ 0 + full_sample_w_interact$predictors,
@@ -262,7 +268,6 @@ reps = 100
     unweighted_population_results[i,] = logit.sim.no_interact.unweighted$coefficients
     weighted_population_results[i,] = logit.sim.no_interact.weighted$coefficients
     unweighted_subsample_results[i,] = logit.sim.interact.unweighted$coefficients
-    anova_results[i] <- anova(logit.sim.no_interact.weighted,method = "Wald")$p
     
     # Keep track of which simulation run we are in
     if (i%%100 == 0) { print(paste("Currently at iteration:", i)) }
@@ -272,10 +277,10 @@ reps = 100
   li_results$unweighted_population <- unweighted_population_results
   li_results$weighted_population <- weighted_population_results
   li_results$unweighted_target <- unweighted_subsample_results[,1:7] + unweighted_subsample_results[,8:14]
-  li_results$anova_results <- anova_results
   return(li_results)
 }
 
+<<<<<<< HEAD
 test<-matrix(data=0,nrow = 9,ncol = 3)
 reps=50
 for(N_s in 1:3){
@@ -289,6 +294,8 @@ colnames(test) <- c(2500,5000,7500)
 rownames(test) <- c(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
 
 
+=======
+>>>>>>> parent of 35b1b9f... Added wald/anova test to simulation + matrix for dif Q,N
 test = run_simulation(N,Q,reps)
 
 output_results <- function(li_results){
