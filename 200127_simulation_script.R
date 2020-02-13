@@ -265,8 +265,8 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-
                              data = svy_inputs$data,
                              weight = weights)
     logit.sim.interact.weighted <- svyglm(formula = svy_inputs$func,
-                                             design =  design_func,
-                                             family = "quasibinomial")
+                                          design =  design_func,
+                                          family = "quasibinomial")
     
     # Fit unweighted logit for model with interactions
     logit.sim.interact.unweighted <-  glm(full_sample_w_interact$consideration
@@ -291,29 +291,41 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-
   return(li_results)
 }
 
+#Wald_test_sim <- function(target_gender="Male", target_age="25-34"){
 
-test<-matrix(data=0,nrow = 19,ncol = 4)
-reps=50
-for(N_s in 1:4){
-  N_s2 = 2000 + N_s*250
+#run simulation multiple times for different Q and N and saving wald test results
+test<-matrix(data=0,nrow = 19,ncol = 5)
+reps=100
+for(N_s in 1:5){
+  N_s2 = 1750 + N_s*250
   for(l in 1:19){
     R=l/20
-    test[l,N_s] <- sum(ifelse((run_simulation(N_s2,R,reps, target_gender = "Male", target_age = "25-34")$anova_results<0.05) == FALSE,1,0))/reps
+    test[l,N_s] <- sum(ifelse((run_simulation(N_s2,R,reps, target_gender = "Male", target_age = "25-34")$anova_results<0.05) == FALSE,0,1))/reps
   }
 }
-colnames(test) <- c(2500,5000,7500,9000)
-rownames(test) <- c(0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95)
 
+#make matrix with wald test results and add a Q row.
 test2 <- cbind(c(0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95),test)
-colnames(test2) <- c("aud_rate","N2500","N5000","N7500", "N900")
+colnames(test2) <- c("Q","N2000","N2250","N2500", "N2750","N3000")
 
-ggplot(as.data.frame(test2), aes(x=aud_rate, y=Observations)) + 
-  geom_line(aes(y = N2500, color = "red"),show.legend= TRUE) + 
-  geom_line(aes(y = N5000, color="blue"),show.legend= TRUE) +
-  geom_line(aes(y = N7500, color="yellow"),show.legend= TRUE) +
-  geom_line(aes(y = N9000, color="green"),show.legend= TRUE) +
-  scale_color_discrete(name = "Rejection rate", labels = c("2000", "1000", "3000"))
+#Make a line plot for the H0 rejection rate.
+ggplot(as.data.frame(test2), aes(x=Q, y=Reject_H0)) + 
+  geom_line(aes(y = N2000, color = "red"),show.legend= TRUE) + 
+  geom_line(aes(y = N2250, color="blue"),show.legend= TRUE) +
+  geom_line(aes(y = N2500, color="yellow"),show.legend= TRUE) +
+  geom_line(aes(y = N2750, color="green"),show.legend= TRUE) +
+  geom_line(aes(y = N3000, color="black"),show.legend= TRUE) +
+  scale_color_discrete(name = "Observations", labels = c("2250", "2000", "2500","2750", "3000"))
 
+#Boxplot for visualization purposes.
+boxplot(test2[,2:6], ylab= "Rejection_H0",xlab="Observations", main="Wald test for difference between target and total audience estimators")
+
+
+# wald_list <- list()
+# wald_list$boxplot <- boxplot_sim
+# wald_list$ggplot <- ggplot_sim
+#return(boxplot(test2[,2:6], ylab= "Rejection_H0",xlab="Observations", main="Wald test for difference between target and total audience estimators"))
+#}
 
 
 output_results <- function(li_results){
