@@ -310,12 +310,12 @@ colnames(test2) <- c("Q","N2000","N2250","N2500", "N2750","N3000")
 
 #Make a line plot for the H0 rejection rate.
 ggplot(as.data.frame(test2), aes(x=Q, y=Reject_H0)) + 
-  geom_line(aes(y = N2000, color = "red"),show.legend= TRUE) + 
+  geom_line(aes(y = N2750, color = "red"),show.legend= TRUE) +
   geom_line(aes(y = N2250, color="blue"),show.legend= TRUE) +
-  geom_line(aes(y = N2500, color="yellow"),show.legend= TRUE) +
-  geom_line(aes(y = N2750, color="green"),show.legend= TRUE) +
-  geom_line(aes(y = N3000, color="black"),show.legend= TRUE) +
-  scale_color_discrete(name = "Observations", labels = c("2250", "2000", "2500","2750", "3000"))
+  geom_line(aes(y = N3000, color="yellow"),show.legend= TRUE) + 
+  geom_line(aes(y = N2500, color="green"),show.legend= TRUE)  +
+  geom_line(aes(y = N2000, color="black"),show.legend= TRUE) +
+  scale_color_discrete(name = "Observations", labels = c("2000", "2250", "2500","2750", "3000"))
 
 #Boxplot for visualization purposes.
 boxplot(test2[,2:6], ylab= "Rejection_H0",xlab="Observations", main="Wald test for difference between target and total audience estimators")
