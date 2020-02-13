@@ -264,10 +264,20 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-
                                           ~ 0 + full_sample_w_interact$predictors,
                                           family = binomial(link="logit"))
     
+    # Fit weighted logit for model with interactions
+    svy_inputs = create_svyglm_inputs(full_sample_w_interact$predictors, full_sample$consideration)
+    design_func <- svydesign(id = ~1,
+                             data = svy_inputs$data,
+                             weight = weights)
+    logit.sim.interact.weighted <- svyglm(formula = svy_inputs$func,
+                                          design =  design_func,
+                                          family = "quasibinomial")
+    
     # Store results of current run
     unweighted_population_results[i,] = logit.sim.no_interact.unweighted$coefficients
     weighted_population_results[i,] = logit.sim.no_interact.weighted$coefficients
     unweighted_subsample_results[i,] = logit.sim.interact.unweighted$coefficients
+    anova_results[i] <- anova(logit.sim.no_interact.weighted,method = "Wald")$p
     
     # Keep track of which simulation run we are in
     if (i%%100 == 0) { print(paste("Currently at iteration:", i)) }
@@ -277,10 +287,10 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-
   li_results$unweighted_population <- unweighted_population_results
   li_results$weighted_population <- weighted_population_results
   li_results$unweighted_target <- unweighted_subsample_results[,1:7] + unweighted_subsample_results[,8:14]
+  li_results$anova_results <- anova_results
   return(li_results)
 }
 
-<<<<<<< HEAD
 test<-matrix(data=0,nrow = 9,ncol = 3)
 reps=50
 for(N_s in 1:3){
@@ -294,8 +304,6 @@ colnames(test) <- c(2500,5000,7500)
 rownames(test) <- c(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9)
 
 
-=======
->>>>>>> parent of 35b1b9f... Added wald/anova test to simulation + matrix for dif Q,N
 test = run_simulation(N,Q,reps)
 
 output_results <- function(li_results){
@@ -324,20 +332,6 @@ output_results <- function(li_results){
 li_results <- run_simulation()
 output_results(li_results)
 rejection_percentage_true_pars()
-
-
-## Function that will output the percentage of true parameter rejections of the simulation
-rejection_percentage_true_pars <- function(results=li_results, true_parameter_estimate = ){
-  target_parameters = colmeans(li_results$)
-  rej_count=0
-  for(i in nrow(target)){
-    p_val_ttest = t.test(target ,alternative = "two.sided",mu=true_parameter_estimate)$p.value
-    if (p_val_ttest<.05) {
-      rej_count = rej_count+1
-    }  
-  }
-  
-}
 
 
 #plot for procentual hit rate for weighted and unweighted glm and estimator plots
@@ -399,47 +393,3 @@ plot(cbind(c(1:100),pred_unweighted))
 plot(cbind(c(1:100),pred_weighted))
 plot(cbind(c(1:100),pred_weighted_target))
 
-# # Simulated target group
-# sim_target_variables = list()
-# #   1) Separate predictors and responses for simulated (target) group
-# sim_target_variables$predictors = add_constant(simulated_population)
-# #   2) Fit outcomes
-# sim_target_variables$familiarity = generate_response(sim_target_variables$predictors,
-#                                                      logit.target.familiarity$coefficients,
-#                                                      nrow(simulated_population))
-# sim_target_variables$awareness = generate_response(sim_target_variables$predictors,
-#                                                    logit.target.awareness$coefficients,
-#                                                    nrow(simulated_population))
-# sim_target_variables$consideration = generate_response(sim_target_variables$predictors,
-#                                                        logit.target.consideration$coefficients,
-#                                                        nrow(simulated_population))
-# 
-# # Create full sample of simulated targets and real data nontargets
-# sim_fullsample_variables = list()
-# sim_fullsample_variables$predictors = rbind(sim_target_variables$predictors,
-#                                             true_nontarget_variables$predictors)
-# sim_fullsample_variables$familiarity = append(sim_target_variables$familiarity,
-#                                               true_nontarget_variables$familiarity)
-# sim_fullsample_variables$awareness = append(sim_target_variables$awareness,
-#                                             true_nontarget_variables$awareness)
-# sim_fullsample_variables$consideration = append(sim_target_variables$consideration,
-#                                                 true_nontarget_variables$consideration)
-#   
-# 
-# 
-# 
-# # Create nontarget subsample of appropriate size
-# idx = sample(1:nrow(subsamples$nontarget),
-#              (nrow(source_data)-nrow(simulated_population)) )
-# true_nontarget_variables = separate_predictors_responses(subsamples$nontarget[idx,])
-# true_nontarget_variables$predictors = add_constant(true_nontarget_variables$predictors)
-# 
-# # Appending design matrix with interaction between predictors and target dummy
-# interaction = rbind(unname(sim_target_variables$predictors),
-#                     matrix(0,
-#                            nrow(true_nontarget_variables$predictors),
-#                            ncol(true_nontarget_variables$predictors)))
-# 
-# sim_fullsample_variables$predictors = cbind(sim_fullsample_variables$predictors,
-#                                             interaction)
-# 
