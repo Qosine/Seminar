@@ -91,7 +91,7 @@ draw_new_samples <- function(original_data,
     population[,i] = sample(original_data[,i],
                     size = population_size,
                     replace = user_replace_choice)
-  }
+    }
   return(population)
 }
 
@@ -101,9 +101,9 @@ simulate_population <- function(path,
                                 population_size,
                                 seed = 200127,
                                 target_audience=TRUE,
-                                target1_gender_m=TRUE,
-                                target1_min_age=25,
-                                target1_max_age=34,
+                                target1_gender_m,
+                                target1_min_age,
+                                target1_max_age,
                                 target2_gender_m=NULL,
                                 target2_min_age=NULL,
                                 target2_max_age=NULL,
@@ -123,8 +123,12 @@ simulate_population <- function(path,
   
   subsamples = split_sample(data, li_target1, li_target2)
   
+  #print(head(data))
+  
   target_contacts = sum_contact_vars(subsamples$target)
   nontarget_contacts = sum_contact_vars(subsamples$nontarget)
+  
+  #print(head(target_contacts))
   
   if (target_audience==TRUE) {population = draw_new_samples(target_contacts,
                                                             population_size,
@@ -134,7 +138,37 @@ simulate_population <- function(path,
                                       replacement)}
   return(population)
 }
+
+# Set path
 path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
-path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Data"
-simulated_population = simulate_population(path, 50000)
-rm(list=setdiff(ls(), "simulated_population"))
+path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
+
+# Create overview of demographic groups over which we can loop
+demographic_groups = rbind(c("Male", 25, 34),
+                           c("Male", 35, 44),
+                           c("Male", 45, 54),
+                           c("Male", 55, 99),
+                           c("Female", 25, 34),
+                           c("Female", 35, 44),
+                           c("Female", 45, 54),
+                           c("Female", 55, 99))
+
+datafile_names = c("male_25_34", "male_35_44", "male_45_54", "male_55_99",
+                   "female_25_34", "female_35_44", "female_45_54", "female_55_99")
+
+no_obs_to_simulate = 15*10^3
+
+
+for (i in 1:nrow(demographic_groups)) {
+  print(demographic_groups[i,])
+  if (demographic_groups[i, 1] == "Male") {male_dummy = TRUE} else {male_dummy = FALSE}
+  simulated_population = simulate_population(path,
+                                             no_obs_to_simulate,
+                                             target_audience = TRUE,
+                                             target1_gender_m = male_dummy,
+                                             target1_min_age = demographic_groups[i, 2],
+                                             target1_max_age = demographic_groups[i, 3])
+  datafile_string = paste(datafile_names[i], ".Rds", sep="")
+  saveRDS(simulated_population, file = datafile_string)
+  print("Simulated successfully")
+}
