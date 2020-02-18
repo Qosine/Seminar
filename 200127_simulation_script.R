@@ -1,12 +1,14 @@
 set.seed(200127)
 
 #install.packages("pROC")
+#install.packages("randomForest")
 library(mvtnorm)
 library(simcausal)
 library(dplyr)
 library(survey)
 library(pROC)
 library(ddpcr)
+library(randomForest)
 
 ## SETUP ##
 split_sample <- function(data,
@@ -82,6 +84,7 @@ sample_data <- function(target_group, nontarget_groups, target_predictors, nonta
   normalising_constant = 1 - CPS[target_age, target_gender]
   
   for (group in nontarget_groups) {
+    group_info = "female_34_44"
     group_info = separate_demographic_info(group)
     CPS_proportion = CPS[group_info$age, group_info$gender]
     
@@ -108,7 +111,7 @@ sample_data <- function(target_group, nontarget_groups, target_predictors, nonta
     idx_test = idx_test + nrow(get(group))*(match(group, nontarget_groups)-1)
     
     out$nontarget_train = append(out$nontarget_train, idx_train)
-    out$nontarget_test = append(out$nontarget_train, idx_test)
+    out$nontarget_test = append(out$nontarget_test, idx_test)
   }
   return(out)
   
@@ -255,8 +258,8 @@ male_55_99 = readRDS("./male_55_99.RDS")
 
 # Set simulation hyperparameters
 N = 7500
-Q = .80
-reps = 25
+Q = .5
+reps = 100
 
 ###################### RUN SIMULATION FUNCTION
 run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 25, target_max_age = 34){
@@ -297,7 +300,7 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
   coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
                         "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
                         "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
-  auc_colnames = c("unweighted_population", "weighted_population", "with_interaction")
+  auc_colnames = c("glm_unweighted", "svyglm", "with_interaction")
   colnames(unweighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
   colnames(weighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
   colnames(unweighted_subsample_results) = coefficient_names
@@ -377,10 +380,16 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
                                           design =  design_func,
                                           family = "quasibinomial")
     
+    # Fit random forest and cross-validate
+    # rf.untuned <- randomForest(x = train_sample$predictors,
+    #                            y = as.factor(train_sample$consideration),
+    #                            ntree = 200)
+    # test_df = data.frame(as.factor(test_sample$consideration), test_sample$predictors)
+    
     # Make predictions; use the proportion of 1s 
     predictions = list()
     #threshold = 0.5
-    threshold = mean(test_sample$consideration)
+    threshold = mean(train_sample$consideration)
     predictions$no_interact_unweighted = predict_response(test_sample$predictors,
                                                           logit.sim.no_interact.unweighted$coefficients,
                                                           threshold)
@@ -390,6 +399,9 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
     predictions$w_interact = predict_response(test_sample_w_interact$predictors,
                                               logit.sim.interact.unweighted$coefficients,
                                               threshold)
+    # predictions$rf = predict(rf.untuned, test_df, type='prob')[,2]
+    # predictions$rf[predictions$rf>threshold] = 1
+    # predictions$rf[predictions$rf<threshold] = 0
     
     # Compute AUC metric - run this using quiet() to avoid repeated (extremely annoying)
     # print function that is hardcoded in auc()
@@ -422,7 +434,7 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
   return(li_results)
 }
 
-test = run_simulation(N, Q, reps, target_gender = "Male", target_min_age = 25, target_max_age = 34)
+test = run_simulation(N, Q, reps, target_gender = "Female", target_min_age = 45, target_max_age = 54)
 
 test<-matrix(data=0,nrow = 9,ncol = 3)
 reps=50
