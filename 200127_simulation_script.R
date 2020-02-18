@@ -1,8 +1,12 @@
 set.seed(200127)
+
+#install.packages("pROC")
 library(mvtnorm)
 library(simcausal)
 library(dplyr)
 library(survey)
+library(pROC)
+library(ddpcr)
 
 ## SETUP ##
 split_sample <- function(data,
@@ -50,51 +54,58 @@ separate_predictors_responses <- function(subsample) {
   return(out)
 }
 
+# Helper function that converts strings of form "male_25_34" to "Male" and "25-34"
+separate_demographic_info <- function(input_string) {
+  if (tolower(substring(input_string, 1, 1))=='f') {
+    gender = "Female"; min_age = substring(input_string, 8, 9); max_age = substring(input_string, 11, 12)
+  } else {
+    gender = "Male"; min_age = substring(input_string, 6, 7); max_age = substring(input_string, 9, 10)
+  }
+  out = list(); out$gender = gender; out$age = paste(min_age, max_age, sep="-")
+  return(out)
+}
+
 # Sample simulated data
 sample_data <- function(target_group, nontarget_groups, target_predictors, nontarget_predictors, N, Q,
                         target_gender, target_age) {
   
   out = list(); 
   
+  # Draw target train and test samples
+  # For training set size should be N*Q, for test set we use CPS ratio
   out$target_train = sample( 1:nrow(target_predictors), N*Q )
-  out$target_test = sample( setdiff(1:nrow(target_predictors), out$target_train), N*Q )
+  out$target_test = sample( setdiff(1:nrow(target_predictors), out$target_train),
+                            floor(N*CPS[target_age, target_gender]))
   out$nontarget_train = out$nontarget_test = c()
   
   # Normalise sample sizes of nontarget groups for fact CPS proportions assume target group is present
   normalising_constant = 1 - CPS[target_age, target_gender]
   
   for (group in nontarget_groups) {
-    if (tolower(substring(group, 1, 1))=='f') {
-      gender = "Female"; min_age = substring(group, 8, 9); max_age = substring(group, 11, 12)
-    } else {
-      gender = "Male"; min_age = substring(group, 6, 7); max_age = substring(group, 9, 10)
-    }
-    age = paste(min_age, max_age, sep="-")
-    CPS_proportion = CPS[age, gender]
+    group_info = separate_demographic_info(group)
+    CPS_proportion = CPS[group_info$age, group_info$gender]
     
     # We encounter a problem here when using CPS proportions, since we might end up with a non-integer
     # number of index draws. To account for this we use the floor function for all groups except the last.
     # Then we can make sure the total number of non-target observations adds up to N*(1-Q) by adding the difference
     if (group != nontarget_groups[length(nontarget_groups)]) {
-      
       # Sample indices as if all target group data was in separate matrices
       idx_train = sample(1:nrow(get(group)),
                          floor(N*(1-Q)*CPS_proportion/normalising_constant))
       idx_test = sample(setdiff(1:nrow(get(group)),idx_train),
-                        floor(N*(1-Q)*CPS_proportion/normalising_constant))
-      
-      # Account for the fact that all nontarget data is placed in 1 large matrix of 15k per group
-      # Move row numbers ahead by appropriate multiple of 15k (subtract 1 since we start at multiple 0)
-      idx_train = idx_train + nrow(get(group))*(match(group, nontarget_groups)-1)
-      idx_test = idx_test + nrow(get(group))*(match(group, nontarget_groups)-1)
+                        floor(N*CPS_proportion))
     } else {
       # Sample indices as if all target group data was in separate matrices
-      no_obs_remaining = N*(1-Q) - length(out$nontarget_train)
-      idx_train = sample(1:nrow(get(group)), no_obs_remaining)
-      idx_test = sample(setdiff(1:nrow(get(group)),idx_train), no_obs_remaining)
-      idx_train = idx_train + nrow(get(group))*(match(group, nontarget_groups)-1)
-      idx_test = idx_test + nrow(get(group))*(match(group, nontarget_groups)-1)
+      train_obs_remaining = N*(1-Q) - length(out$nontarget_train)
+      test_obs_remaining = N - length(out$target_test) - length(out$nontarget_test)
+      idx_train = sample(1:nrow(get(group)), train_obs_remaining)
+      idx_test = sample(setdiff(1:nrow(get(group)),idx_train), test_obs_remaining)
     }
+    
+    # Account for the fact that all nontarget data is placed in 1 large matrix of 15k per group
+    # Move row numbers ahead by appropriate multiple of 15k (subtract 1 since we start at multiple 0)
+    idx_train = idx_train + nrow(get(group))*(match(group, nontarget_groups)-1)
+    idx_test = idx_test + nrow(get(group))*(match(group, nontarget_groups)-1)
     
     out$nontarget_train = append(out$nontarget_train, idx_train)
     out$nontarget_test = append(out$nontarget_train, idx_test)
@@ -112,13 +123,29 @@ rename_interaction_columns <- function(column_names) {
   return( paste("ia", column_names, sep="_"))
 }
 
+add_interaction_variables <- function(full_sample_predictors,
+                                      target_predictors,
+                                      nontarget_predictors) {
+  interaction = rbind(target_predictors,
+                      matrix(0, nrow(nontarget_predictors), ncol(nontarget_predictors)))
+  colnames(interaction) = rename_interaction_columns(colnames(interaction))
+  return(cbind(full_sample_predictors, interaction))
+}
+
 ## DEPENDENT VARIABLES / OUTCOMES ##
 sigmoid_function <- function(x) 1/(1+exp(-x))
 
 generate_response <- function(predictors, parameters, sample_size) {
   Pr_success <- sigmoid_function( predictors%*%parameters ) # compute Pr(Y=1 | X=x)
   response <- rbern( n=sample_size, prob=Pr_success ) # draw from corresponding Bernoulli distribution
-  return (response)
+  return (as.numeric(response))
+}
+
+predict_response <- function(predictors, parameters, threshold) {
+  yhat = sigmoid_function( predictors%*%parameters )
+  yhat[yhat<threshold] = 0
+  yhat[yhat>threshold] = 1
+  return(as.numeric(yhat))
 }
 
 ## WEIGHTS ##
@@ -215,9 +242,6 @@ rownames(CPS) = c("25-34", "35-44", "45-54", "55-99")
 true_population_params = compute_population_params()
 
 
-
-
-
 # Load simulated demographic subgroups
 
 female_25_34 = readRDS("./female_25_34.Rds")
@@ -232,10 +256,13 @@ male_55_99 = readRDS("./male_55_99.RDS")
 # Set simulation hyperparameters
 N = 7500
 Q = .80
-reps = 100
+reps = 25
 
 ###################### RUN SIMULATION FUNCTION
 run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 25, target_max_age = 34){
+  
+  target_gender = "Male"; target_min_age = 25; target_max_age = 34
+  
   
   # Using inputs, create some strings needed later
   target_group = paste( tolower(target_gender), toString(target_min_age), toString(target_max_age), sep="_" )
@@ -264,14 +291,17 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
   unweighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
   weighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
   unweighted_subsample_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+  auc_results = data.frame(matrix(0, reps, 3))
   
   # Name columns of results df
   coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
                         "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
                         "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
+  auc_colnames = c("unweighted_population", "weighted_population", "with_interaction")
   colnames(unweighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
   colnames(weighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
   colnames(unweighted_subsample_results) = coefficient_names
+  colnames(auc_results) = auc_colnames
   
   for (i in 1:reps) {
     
@@ -300,7 +330,7 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
     train_sample$predictors = rbind(target_train$predictors, nontarget_train$predictors)
     train_sample$consideration = append(target_train$consideration, nontarget_train$consideration)
     test_sample$predictors = rbind(target_test$predictors, nontarget_test$predictors)
-    test_sample$consideration = append(target_test$predictors, nontarget_test$predictors)
+    test_sample$consideration = append(target_test$consideration, nontarget_test$consideration)
     
     # Compute weights
     #target_CPS_weight = CPS[target_gender, target_age]
@@ -312,12 +342,15 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
     # To include target-group specific parameters we need to augment the design matrix
     # We do this by adding interaction variables. For the target sample this means
     # keeping the original data, for the non-target sample we must replace by zero
-    train_sample_w_interact = list()
-    interaction = rbind(target_train$predictors,
-                        matrix(0, nrow(nontarget_train$predictors), ncol(nontarget_train$predictors)))
-    colnames(interaction) = rename_interaction_columns(colnames(interaction))
-    train_sample_w_interact$predictors = cbind(train_sample$predictors, interaction)
+    train_sample_w_interact = test_sample_w_interact = list()
+    train_sample_w_interact$predictors = add_interaction_variables(train_sample$predictors,
+                                                                   target_train$predictors,
+                                                                   nontarget_train$predictors)
+    test_sample_w_interact$predictors = add_interaction_variables(test_sample$predictors,
+                                                                  target_test$predictors,
+                                                                  nontarget_test$predictors)
     train_sample_w_interact$consideration = train_sample$consideration
+    test_sample_w_interact$consideration = test_sample$consideration
     
     # Fit regular logit for model without interactions
     logit.sim.no_interact.unweighted <- glm(train_sample$consideration
@@ -331,6 +364,7 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
                                              design = design_func,
                                              family = "quasibinomial")
     
+    
     # Fit unweighted logit for model with interactions
     logit.sim.interact.unweighted <-  glm(train_sample_w_interact$consideration
                                           ~ 0 + train_sample_w_interact$predictors,
@@ -343,6 +377,29 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
                                           design =  design_func,
                                           family = "quasibinomial")
     
+    # Make predictions; use the proportion of 1s 
+    predictions = list()
+    #threshold = 0.5
+    threshold = mean(test_sample$consideration)
+    predictions$no_interact_unweighted = predict_response(test_sample$predictors,
+                                                          logit.sim.no_interact.unweighted$coefficients,
+                                                          threshold)
+    predictions$no_interact_weighted = predict_response(test_sample$predictors,
+                                                        logit.sim.no_interact.weighted$coefficients,
+                                                        threshold)
+    predictions$w_interact = predict_response(test_sample_w_interact$predictors,
+                                              logit.sim.interact.unweighted$coefficients,
+                                              threshold)
+    
+    # Compute AUC metric - run this using quiet() to avoid repeated (extremely annoying)
+    # print function that is hardcoded in auc()
+    quiet(auc_results[i,] <- c(auc(response = test_sample$consideration,
+                                  predictor = predictions$no_interact_unweighted),
+                              auc(response = test_sample$consideration,
+                                  predictor = predictions$no_interact_weighted),
+                              auc(response = test_sample$consideration,
+                                  predictor = predictions$w_interact)))
+    
     # Store results of current run
     unweighted_population_results[i,] = logit.sim.no_interact.unweighted$coefficients
     weighted_population_results[i,] = logit.sim.no_interact.weighted$coefficients
@@ -354,14 +411,18 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
     
   }
   li_results = list()
-  li_results$unweighted_population <- unweighted_population_results
-  li_results$weighted_population <- weighted_population_results
-  li_results$unweighted_target <- unweighted_subsample_results[,1:7] + unweighted_subsample_results[,8:14]
+  li_results$glm_results <- unweighted_population_results
+  li_results$svyglm_results <- weighted_population_results
+  li_results$interaction_model <- unweighted_subsample_results
+  li_results$interaction_model.target <- unweighted_subsample_results[,1:7] + unweighted_subsample_results[,8:14]
+  li_results$interaction_model.population <- (unweighted_subsample_results[,1:7]*(1-CPS[target_age, target_gender])
+                                              + unweighted_subsample_results[,8:14]*CPS[target_age, target_gender])
   #li_results$anova_results <- anova_results
+  li_results$auc <- auc_results
   return(li_results)
 }
 
-test = run_simulation(N, Q, reps, target_gender = "Female", target_min_age = 35, target_max_age = 44)
+test = run_simulation(N, Q, reps, target_gender = "Male", target_min_age = 25, target_max_age = 34)
 
 test<-matrix(data=0,nrow = 9,ncol = 3)
 reps=50
