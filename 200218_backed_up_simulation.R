@@ -1,3 +1,9 @@
+##### LOAD INTERMEDIATE SIMULATION RESULTS FOR CREATING GRAPHS
+path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
+setwd(path)
+load("./200218_simulation_results_original_nontarget.RData")
+
+
 set.seed(200127)
 library(mvtnorm)
 library(simcausal)
