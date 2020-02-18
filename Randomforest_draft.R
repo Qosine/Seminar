@@ -23,8 +23,8 @@ RandomForest <- function(train_set, test_set, ...){
   # Classification by Random Forest
   yf = as.factor(1 - train.data[,1]) #IS FIRST COLUMN THE LABEL?
   trnSpl =  data.frame(yf,train.data)
-  rf.1 <- randomForest(yf ~ X2+X3, data = trnSpl, ntree = 5000) #CHECK X's
-  rf.cv <- rf.crossValidation(rf.1, xdata = as.data.frame(cbind(X2,X3)), p=0.10, n=10, ntree=5000) #CHECK X's
+  rf.1 <- randomForest(yf ~ X2+X3, data = trnSpl, ntree = 2001, importance=T) #CHECK X's
+  rf.cv <- rf.crossValidation(rf.1, xdata = as.data.frame(cbind(X2,X3)), p=0.10, n=10, ntree=2001) #CHECK X's
   yf = as.factor(1 - test.data[,1])
   testSpl = data.frame(yf, test.data)
   pred.rf = predict(rf.1, testSpl, type = "prob")[,1]
