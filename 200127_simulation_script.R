@@ -180,10 +180,15 @@ create_svyglm_inputs <- function(predictors,
 }
 
 ## EVALUATION ##
-
 RMSE <- function(y, yhat) {(mean((y - yhat)^2))^.5}
-Bias <- function(beta_true, beta_hat) {colMeans(beta_hat) - beta_true}
-
+absBias <- function(beta_true, beta_hat) {abs(colMeans(beta_hat) - beta_true)}
+pctBias <- function(beta_true, beta_hat) {abs((colMeans(beta_hat) - beta_true)/beta_true)}
+process_results <- function(results, true_target_parameters, true_total_parameters) {
+  out = list()
+  out$glm_target_bias = pctBias(true_target_parameters, results$glm_target)
+  out$svyglm_total_bias = pctBias(true_total_parameters, results$svyglm_total)
+  return(out)
+}
 
 ## FITTING TRUE MODELS ##
 compute_population_params <- function(target_gender = "Male", target_age = "25-34") {
@@ -291,20 +296,26 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
                                                          nrow(nontarget_population$predictors))
   
   # Allocate memory for simulation results
-  unweighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
-  weighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
-  unweighted_subsample_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
-  auc_results = data.frame(matrix(0, reps, 3))
+  logit_target_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
+  wlogit_total_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
+  logit_interaction_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))*2))
+  hitrate_results = data.frame(matrix(0, reps, 6))
+  auc_results = data.frame(matrix(0, reps, 4))
   
   # Name columns of results df
   coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
                         "VOD", "Youtube", "Target", "Target*Audio", "Target*Digital",
                         "Target*Program", "Target*TV", "Target*VOD", "Target*Youtube")
-  auc_colnames = c("glm_unweighted", "svyglm", "with_interaction")
-  colnames(unweighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
-  colnames(weighted_population_results) = coefficient_names[1:(length(coefficient_names)/2)]
-  colnames(unweighted_subsample_results) = coefficient_names
+  auc_colnames = c("glm_unweighted", "svyglm", "interaction_model", "rf")
+  hitrate_colnames = c("glm_unweighted", "svyglm", "interaction_model", "rf", "always_0", "always_1")
+  colnames(logit_target_results) = coefficient_names[1:(length(coefficient_names)/2)]
+  colnames(wlogit_total_results) = coefficient_names[1:(length(coefficient_names)/2)]
+  colnames(logit_interaction_results) = coefficient_names
+  colnames(hitrate_results) = hitrate_colnames
   colnames(auc_results) = auc_colnames
+  
+  # Time the simulation
+  start_time = Sys.time()
   
   for (i in 1:reps) {
     
@@ -356,29 +367,29 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
     test_sample_w_interact$consideration = test_sample$consideration
     
     # Fit regular logit for model without interactions
-    logit.sim.no_interact.unweighted <- glm(train_sample$consideration
-                                            ~ 0 + train_sample$predictors,
-                                            family = binomial(link="logit"))
+    logit.sim.target <- glm(target_train$consideration
+                            ~ 0 + target_train$predictors,
+                            family = binomial(link="logit"))
     
     # Fit weighted logit for model without interactions
     svy_inputs = create_svyglm_inputs(train_sample$predictors, train_sample$consideration)
     design_func <- svydesign(id = ~1, data = svy_inputs$data, weight = weights)
-    logit.sim.no_interact.weighted <- svyglm(formula = svy_inputs$func,
-                                             design = design_func,
-                                             family = "quasibinomial")
+    wlogit.sim.total <- svyglm(formula = svy_inputs$func,
+                               design = design_func,
+                               family = "quasibinomial")
     
     
     # Fit unweighted logit for model with interactions
-    logit.sim.interact.unweighted <-  glm(train_sample_w_interact$consideration
-                                          ~ 0 + train_sample_w_interact$predictors,
-                                          family = binomial(link="logit"))
+    logit.sim.interaction <-  glm(train_sample_w_interact$consideration
+                                  ~ 0 + train_sample_w_interact$predictors,
+                                  family = binomial(link="logit"))
     
     # Fit weighted logit for model with interactions
-    svy_inputs = create_svyglm_inputs(train_sample_w_interact$predictors, train_sample$consideration)
-    design_func <- svydesign(id = ~1, data = svy_inputs$data, weight = weights)
-    logit.sim.interact.weighted <- svyglm(formula = svy_inputs$func,
-                                          design =  design_func,
-                                          family = "quasibinomial")
+    # svy_inputs = create_svyglm_inputs(train_sample_w_interact$predictors, train_sample$consideration)
+    # design_func <- svydesign(id = ~1, data = svy_inputs$data, weight = weights)
+    # logit.sim.interact.weighted <- svyglm(formula = svy_inputs$func,
+    #                                       design =  design_func,
+    #                                       family = "quasibinomial")
     
     # Fit random forest and cross-validate
     # rf.untuned <- randomForest(x = train_sample$predictors,
@@ -388,53 +399,95 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_min_age = 
     
     # Make predictions; use the proportion of 1s 
     predictions = list()
-    #threshold = 0.5
-    threshold = mean(train_sample$consideration)
-    predictions$no_interact_unweighted = predict_response(test_sample$predictors,
-                                                          logit.sim.no_interact.unweighted$coefficients,
-                                                          threshold)
-    predictions$no_interact_weighted = predict_response(test_sample$predictors,
-                                                        logit.sim.no_interact.weighted$coefficients,
-                                                        threshold)
-    predictions$w_interact = predict_response(test_sample_w_interact$predictors,
-                                              logit.sim.interact.unweighted$coefficients,
-                                              threshold)
+    threshold = 0.5
+    #threshold = mean(train_sample$consideration)
+    predictions$logit.target = predict_response(test_sample$predictors,
+                                                logit.sim.target$coefficients,
+                                                threshold)
+    predictions$wlogit.total = predict_response(test_sample$predictors,
+                                                wlogit.sim.total$coefficients,
+                                                threshold)
+    predictions$logit.interaction = predict_response(test_sample_w_interact$predictors,
+                                                     logit.sim.interaction$coefficients,
+                                                     threshold)
     # predictions$rf = predict(rf.untuned, test_df, type='prob')[,2]
     # predictions$rf[predictions$rf>threshold] = 1
     # predictions$rf[predictions$rf<threshold] = 0
     
+    
+    # Compute hitrates from confusion matrix - proportion of correct predictions
+    hitrate_results[i,] = c(mean(predictions$logit.target == test_sample$consideration),
+                            mean(predictions$wlogit.total == test_sample$consideration),
+                            mean(predictions$logit.interaction == test_sample$consideration),
+                            0, #mean(predictions$rf == test_sample$consideration),
+                            mean(0 == test_sample$consideration), # always predict 0
+                            mean(1 == test_sample$consideration)) # always predict 1
+    
+    
     # Compute AUC metric - run this using quiet() to avoid repeated (extremely annoying)
     # print function that is hardcoded in auc()
-    quiet(auc_results[i,] <- c(auc(response = test_sample$consideration,
-                                  predictor = predictions$no_interact_unweighted),
-                              auc(response = test_sample$consideration,
-                                  predictor = predictions$no_interact_weighted),
-                              auc(response = test_sample$consideration,
-                                  predictor = predictions$w_interact)))
+    quiet(auc_results[i,] <- c(auc(response = test_sample$consideration, predictor = predictions$logit.target),
+                              auc(response = test_sample$consideration, predictor = predictions$wlogit.total),
+                              auc(response = test_sample$consideration, predictor = predictions$logit.interaction),
+                              0 # auc(response = test_sample$consideration, predictor = predictions$rf)
+                              ))
     
     # Store results of current run
-    unweighted_population_results[i,] = logit.sim.no_interact.unweighted$coefficients
-    weighted_population_results[i,] = logit.sim.no_interact.weighted$coefficients
-    unweighted_subsample_results[i,] = logit.sim.interact.unweighted$coefficients
+    logit_target_results[i,] = logit.sim.target$coefficients
+    wlogit_total_results[i,] = wlogit.sim.total$coefficients
+    logit_interaction_results[i,] = logit.sim.interaction$coefficients
     #anova_results[i] <- anova(logit.sim.no_interact.weighted,method = "Wald")$p
     
-    # Keep track of which simulation run we are in
-    if (i%%25 == 0) { print(paste("Currently at iteration:", i)) }
+    # Keep track of elapsed time and which simulation run we are in
+    if (i%%25 == 0) {
+      running_time = Sys.time() - start_time
+      print(paste("Currently at iteration:", i))
+      if (running_time <= 60) {
+        print(paste("Time elapsed:", round(running_time,2), "seconds"))
+      } else {
+        print(paste("Time elapsed:", floor(running_time/60), "minutes and", (running_time%%60), "seconds"))
+      }
+      
+    }
     
   }
   li_results = list()
-  li_results$glm_results <- unweighted_population_results
-  li_results$svyglm_results <- weighted_population_results
-  li_results$interaction_model <- unweighted_subsample_results
-  li_results$interaction_model.target <- unweighted_subsample_results[,1:7] + unweighted_subsample_results[,8:14]
-  li_results$interaction_model.population <- (unweighted_subsample_results[,1:7]*(1-CPS[target_age, target_gender])
-                                              + unweighted_subsample_results[,8:14]*CPS[target_age, target_gender])
+  li_results$glm_target <- logit_target_results
+  li_results$svyglm_total <- wlogit_total_results
+  li_results$glm_interaction <- logit_interaction_results
+  li_results$glm_interaction.target <- logit_interaction_results[,1:7] + logit_interaction_results[,8:14]
+  li_results$glm_interaction.total <- (logit_interaction_results[,1:7]*(1-CPS[target_age, target_gender])
+                                       + logit_interaction_results[,8:14]*CPS[target_age, target_gender])
   #li_results$anova_results <- anova_results
   li_results$auc <- auc_results
+  li_results$hitrate <- hitrate_results
   return(li_results)
 }
 
-test = run_simulation(N, Q, reps, target_gender = "Female", target_min_age = 45, target_max_age = 54)
+
+target_proportions = 10*(1:9)
+for (prop in target_proportions) {
+  cat(paste("\nRunning simulation for Q =", prop, "\n"))
+  assign(paste("Q", prop, sep=""), run_simulation(N, Q = prop/100, reps = 100, target_gender = "Male",
+                                                  target_min_age = 25, target_max_age = 34))
+}
+
+df_rows = paste("Q", target_proportions, sep = "")
+df_cols = c("Intercept", "Audio", "Digital", "Program", "TV", "VOD", "Youtube")
+results_df = data.frame(matrix(0, length(df_rows), length(df_cols)))
+rownames(results_df) = df_rows; colnames(results_df) = df_cols
+
+for (prop in target_proportions) {
+  varname = paste("Q", prop, sep="")
+  estimates = get(varname)
+  bias = pctBias(true_population_params, estimates$svyglm_total)
+  results_df[varname,] = bias
+}
+
+plot(results_df[,5])
+
+test = process_results(Q10, logit.target.consideration$coefficients, true_population_params)
+
 
 test<-matrix(data=0,nrow = 9,ncol = 3)
 reps=50
