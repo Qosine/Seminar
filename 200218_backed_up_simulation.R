@@ -1,8 +1,6 @@
 ##### LOAD INTERMEDIATE SIMULATION RESULTS FOR CREATING GRAPHS
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 setwd(path)
-load("./200218_simulation_results_original_nontarget.RData")
-
 
 set.seed(200127)
 library(mvtnorm)
@@ -10,6 +8,7 @@ library(simcausal)
 library(dplyr)
 library(survey)
 library(ggplot2)
+library(robustbase)
 
 ## SETUP ##
 split_sample <- function(data,
@@ -110,6 +109,7 @@ create_svyglm_inputs <- function(predictors,
 RMSE <- function(y, yhat) {(mean((y - yhat)^2))^.5}
 Bias <- function(beta_true, beta_hat) {colMeans(beta_hat) - beta_true}
 pctBias <- function(beta_true, beta_hat) {abs((colMeans(beta_hat) - beta_true)/beta_true)}
+medianBias <- function(beta_true, beta_hat) {abs((colMedians(beta_hat) - beta_true)/beta_true)}
 
 ## FITTING TRUE MODELS ##
 compute_population_params <- function(target_gender = "Male", target_age = "25-34") {
@@ -184,12 +184,16 @@ simulated_population$consideration = generate_response(simulated_population$pred
                                                        nrow(simulated_population$predictors) )
 
 # Set simulation hyperparameters
-N = 7500
-Q = .80
-reps = 100
+# N = 2500
+# Q = .80
+# reps = 100
 
 ###################### RUN SIMULATION FUNCTION
 run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-34"){
+  
+  # For looped simulation, keep track of which value of Q we are currently on
+  print(paste("Q:", Q))
+  start_time = Sys.time()
   
   # Allocate memory for simulation results
   unweighted_population_results = data.frame(matrix(0, reps, ncol(add_constant(true_fullsample_variables$predictors))))
@@ -286,7 +290,11 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-
     #anova_results[i] <- anova(logit.sim.no_interact.weighted,method = "Wald")$p
     
     # Keep track of which simulation run we are in
-    if (i%%100 == 0) { print(paste("Currently at iteration:", i)) }
+    if (i%%100 == 0) {
+      current_time = Sys.time()
+      elapsed = current_time - start_time
+      print(paste("Currently at iteration:", i, "| Time elapsed:", round(elapsed, 2), attr(elapsed, "units")))
+    }
     
   }
   li_results = list()
@@ -297,10 +305,10 @@ run_simulation <- function(N, Q, reps, target_gender = "Male", target_age = "25-
   return(li_results)
 }
 
-target_proportions = 10*(1:9)
+target_proportions = 5*(2:18)#[c(TRUE,FALSE)]
 for (prop in target_proportions) {
-  cat(paste("\nRunning simulation for Q =", prop, "\n"))
-  assign(paste("Q", prop, sep=""), run_simulation(N, Q = prop/100, reps = 50))
+  assign(paste("Q", prop, sep=""), c())
+  assign(paste("Q", prop, sep=""), run_simulation(N = 1500, Q = prop/100, reps = 200))
 }
 
 df_rows = paste("Q", target_proportions, sep = "")
@@ -312,8 +320,8 @@ total_results_df = targ_results_df
 for (prop in target_proportions) {
   varname = paste("Q", prop, sep="")
   estimates = get(varname)
-  targ_bias = pctBias(logit.target.consideration$coefficients, estimates$unweighted_population)
-  total_bias = pctBias(true_population_params, estimates$weighted_population)
+  targ_bias = medianBias(logit.target.consideration$coefficients, as.matrix(estimates$unweighted_population))
+  total_bias = medianBias(true_population_params, as.matrix(estimates$weighted_population))
   targ_results_df[varname,] = targ_bias
   total_results_df[varname,] = total_bias
 }
@@ -328,6 +336,7 @@ for (var in df_cols) {
 
 
 # Intercept plot
+max_bias = max(targ_results_df["Intercept"]*10, total_results_df["Intercept"]*10)
 (ggplot(data = Intercept_df, aes(x=index, y=bias*100, colour=Audience))
   + geom_line() + geom_point() + ylim(0, 5)
   + labs(x="Proportion target observations (%)",
@@ -336,48 +345,54 @@ for (var in df_cols) {
   + theme(plot.title = element_text(hjust = 0.5)))
 
 # Audio
+max_bias = max(targ_results_df["Audio"]*10, total_results_df["Audio"]*10)
 (ggplot(data = Audio_df, aes(x=index, y=bias*100, colour=Audience))
-  + geom_line() + geom_point() + ylim(0, 50)
+  + geom_line() + geom_point() + ylim(0, 110)
   + labs(x="Proportion target observations (%)",
          y="Bias (% of true parameter)",
          title="Bias of parameter estimates: Audio")
   + theme(plot.title = element_text(hjust = 0.5)))
 
 # Digital
+max_bias = max(targ_results_df["Digital"]*10, total_results_df["Digital"]*10)
 (ggplot(data = Digital_df, aes(x=index, y=bias*100, colour=Audience))
-  + geom_line() + geom_point() + ylim(0, 15)
+  + geom_line() + geom_point() + ylim(0, 70)
   + labs(x="Proportion target observations (%)",
          y="Bias (% of true parameter)",
          title="Bias of parameter estimates: Digital")
   + theme(plot.title = element_text(hjust = 0.5)))
 
 # Program
+max_bias = max(targ_results_df["Program"]*10, total_results_df["Program"]*10)
 (ggplot(data = Program_df, aes(x=index, y=bias*100, colour=Audience))
-  + geom_line() + geom_point() + ylim(0, 50)
+  + geom_line() + geom_point() + ylim(0, 100)
   + labs(x="Proportion target observations (%)",
          y="Bias (% of true parameter)",
          title="Bias of parameter estimates: Program")
   + theme(plot.title = element_text(hjust = 0.5)))
 
 # TV
+max_bias = max(targ_results_df["TV"]*10, total_results_df["TV"]*10)
 (ggplot(data = TV_df, aes(x=index, y=bias*100, colour=Audience))
-  + geom_line() + geom_point() + ylim(0, 20)
+  + geom_line() + geom_point() + ylim(0, 90)
   + labs(x="Proportion target observations (%)",
          y="Bias (% of true parameter)",
          title="Bias of parameter estimates: TV")
   + theme(plot.title = element_text(hjust = 0.5)))
 
 # VOD
+max_bias = max(targ_results_df["VOD"]*10, total_results_df["VOD"]*10)
 (ggplot(data = VOD_df, aes(x=index, y=bias*100, colour=Audience))
-  + geom_line() + geom_point() + ylim(0, 25)
+  + geom_line() + geom_point() + ylim(0, 60)
   + labs(x="Proportion target observations (%)",
          y="Bias (% of true parameter)",
          title="Bias of parameter estimates: VOD")
   + theme(plot.title = element_text(hjust = 0.5)))
 
 # Youtube
+max_bias = max(targ_results_df["Youtube"]*10, total_results_df["Youtube"]*10)
 (ggplot(data = Youtube_df, aes(x=index, y=bias*100, colour=Audience))
-  + geom_line() + geom_point() + ylim(0, 100)
+  + geom_line() + geom_point() + ylim(0, 80)
   + labs(x="Proportion target observations (%)",
          y="Bias (% of true parameter)",
          title="Bias of parameter estimates: Youtube")
