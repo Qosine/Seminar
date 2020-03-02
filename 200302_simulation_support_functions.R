@@ -90,30 +90,54 @@ create_svyglm_inputs <- function(predictors,
   return(out)
 }
 
-## EVALUATION ##
-
-RMSE <- function(y, yhat) {(mean((y - yhat)^2))^.5}
-Bias <- function(beta_true, beta_hat) {colMeans(beta_hat) - beta_true}
-pctBias <- function(beta_true, beta_hat) {abs((colMeans(beta_hat) - beta_true)/beta_true)}
-medianBias <- function(beta_true, beta_hat) {abs((colMedians(beta_hat) - beta_true)/beta_true)}
-
 ## FITTING TRUE MODELS ##
-compute_population_params <- function(target_gender, target_age) {
+compute_population_params <- function(target_gender, target_age, dependent_variable) {
+  
   target_CPS_weight = CPS[target_age, target_gender]
-  population_betas  = logit.target.consideration$coefficients*target_CPS_weight + logit.nontarget.consideration$coefficients*(1-target_CPS_weight)
-  return(population_betas)
+  if ( tolower(dependent_variable)=="consideration" ) {
+    target_params = logit.target.consideration$coefficients
+    nontarget_params = logit.nontarget.consideration$coefficients
+  } else if ( tolower(dependent_variable)=="awareness" ) {
+    target_params = logit.target.awareness$coefficients
+    nontarget_params = logit.nontarget.awareness$coefficients
+  } else if ( tolower(dependent_variable)=="familiarity" ) {
+    target_params = logit.target.familiarity$coefficients
+    nontarget_params = logit.nontarget.familiarity$coefficients
+  } else {
+    print("Invalid KPI chosen, breaking program"); break
+  }
+  return(target_params*target_CPS_weight + nontarget_params*(1-target_CPS_weight))
 }
 
 ## COLLECT ALL NECESSARY TARGET INFO FROM USER INPUT ##
 initialise_target_group <- function(target_gender = c("Male", "Female"),
-                                    target_age = c("25-34", "35-44", "45-54", "55-99")) {
+                                    target_age = c("25-34", "35-44", "45-54", "55-99"),
+                                    kpi = c("Familiarity", "Consideration", "Awareness")) {
   
   target_string = paste("./", tolower(target_gender), "_", substring(target_age,1,2),
                         "_", substring(target_age, nchar(target_age)-1, nchar(target_age)),
                         ".RDS", sep="")
   
+  if (kpi=="Familiarity") {
+    true_target_params = logit.target.familiarity$coefficients
+  } else if (kpi=="Consideration") {
+    true_target_params = logit.target.consideration$coefficients
+  } else if (kpi=="Awareness") {
+    true_target_params = logit.target.awareness$coefficients
+  } else {
+    print("Invalid KPI selected, breaking program"); break
+  }
+   
+  
   return(list(target_data = readRDS(target_string),
-              true_population_params = compute_population_params(target_gender, target_age)))
+              true_target_params = true_target_params,
+              true_population_params = compute_population_params(target_gender, target_age, kpi)))
 }
 
+## EVALUATION OF SIMULATION OUTPUT ##
+MSPE <- function(y, yhat) {(mean((y - yhat)^2))^.5}
+MSE <- function(true_beta, estimates) { (estimates-true_beta)%*%t(estimates-true_beta) }
+Bias <- function(beta_true, beta_hat) {colMeans(beta_hat) - beta_true}
+pctBias <- function(beta_true, beta_hat) {abs((colMeans(beta_hat) - beta_true)/beta_true)}
+medianBias <- function(beta_true, beta_hat) {abs((colMedians(beta_hat) - beta_true)/beta_true)}
 
