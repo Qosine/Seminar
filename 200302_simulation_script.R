@@ -64,30 +64,38 @@ necessary_info = initialise_target_group(target_gender, target_age, kpi)
 # KEY STEP: Define target and nontarget parameters
 
 true_target_params = c(-1.5, -3, 3.2, -1.0, 0.5, 1.0, .75)
+#true_target_params = unname(logit.target.consideration$coefficients)
 true_nontarget_params = c(-2.0, 0.6, 0.4, 0.2, 0.1, 0.5, 1)
-true_nontarget_params = unname(logit.nontarget.consideration$coefficients)
+#true_nontarget_params = unname(logit.nontarget.consideration$coefficients)
 true_population_params = (CPS[target_age, target_gender]*true_target_params
                           + (1-CPS[target_age, target_gender])*true_nontarget_params)
 
 # true_target_params = necessary_info$true_target_params
 # true_target_params = unname(logit.target.consideration$coefficients)
-true_nontarget_params = unname(logit.nontarget.consideration$coefficients)
+#true_nontarget_params = unname(logit.nontarget.consideration$coefficients)
 # true_population_params = necessary_info$true_population_params
 
 simulated_target_predictors = necessary_info$target_data
-simulated_targets = real_nontargets = list()
+simulated_targets = simulated_nontargets = real_nontargets = list()
 simulated_targets$predictors = add_constant(simulated_target_predictors)
 simulated_targets$kpi = generate_response(simulated_targets$predictors,
                                              true_target_params,
                                              nrow(simulated_targets$predictors) )
-real_nontargets$predictors = add_constant(separate_predictors_responses(subsamples$nontarget)$predictors)
-real_nontargets$kpi = generate_response(real_nontargets$predictors, true_nontarget_params, nrow(real_nontargets$predictors))
 
-if ( max(mean(simulated_targets$kpi), mean(real_nontargets$kpi)) > 0.9 |
-     min(mean(simulated_targets$kpi), mean(real_nontargets$kpi)) < 0.1 ) {
+load("./simulated_nontarget_predictors.RData")
+simulated_nontargets$predictors = add_constant(simulated_nontarget_population)
+simulated_nontargets$kpi = generate_response(simulated_nontargets$predictors,
+                                             true_nontarget_params,
+                                             nrow(simulated_nontargets$predictors))
+
+# real_nontargets$predictors = add_constant(separate_predictors_responses(subsamples$nontarget)$predictors)
+# real_nontargets$kpi = generate_response(real_nontargets$predictors, true_nontarget_params, nrow(real_nontargets$predictors))
+
+if ( max(mean(simulated_targets$kpi), mean(simulated_nontargets$kpi)) > 0.9 |
+     min(mean(simulated_targets$kpi), mean(simulated_nontargets$kpi)) < 0.1 ) {
   stop(cat("Parameter choice creates a rare event scenario:\n",
            100*round(mean(simulated_targets$kpi),3), "% of targets and ",
-           100*round(mean(real_nontargets$kpi),3), "% of nontargets have a KPI equal to 1\n",
+           100*round(mean(simulated_nontargets$kpi),3), "% of nontargets have a KPI equal to 1\n",
            "Breaking program, please try a less extreme parameter set", sep="")) }
 
 # Set simulation hyperparameters
@@ -108,7 +116,9 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
   nontarget_glm_results = data.frame(matrix(0, reps, p))
   total_svyglm_results = data.frame(matrix(0, reps, p))
   interaction_results = data.frame(matrix(0, reps, p*2))
-  interaction_model_variance_check = rep(0, reps)
+  var_check_glm = rep(0, reps)
+  var_check_svyglm = rep(0, reps)
+  var_check_interaction = rep(0, reps)
   
   # Name columns of results df
   coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
@@ -129,8 +139,10 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
     rs_targets$predictors = simulated_targets$predictors[idx_rs_targets,]
     rs_targets$kpi = simulated_targets$kpi[idx_rs_targets]
     
-    rs_nontargets$predictors = real_nontargets$predictors[idx_rs_nontargets,]
-    rs_nontargets$kpi = real_nontargets$kpi[idx_rs_nontargets]
+    rs_nontargets$predictors = simulated_nontargets$predictors[idx_rs_nontargets,]
+    rs_nontargets$kpi = simulated_nontargets$kpi[idx_rs_nontargets]
+    # rs_nontargets$predictors = real_nontargets$predictors[idx_rs_nontargets,]
+    # rs_nontargets$kpi = real_nontargets$kpi[idx_rs_nontargets]
     #nontarget_data = separate_predictors_responses(subsamples$nontarget[idx_rs_nontargets,])
     #rs_nontargets$predictors = add_constant(nontarget_data$predictors)
     
@@ -189,16 +201,28 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
     glm.interaction_model <-  glm(full_sample$kpi ~ 0 + full_sample_w_interact$predictors,
                                   family = binomial(link="logit"))
     
-    # Fit additional glm for interaction that allows variance check:
-    # We add a nonsense variable that does not explain anything in y, and store parameter and SE
-    # Model should then reject the null hypothesis 5% of the time
-    meaningless_variable = rnorm(nrow(full_sample_w_interact$predictors))
-    variance_check = list(predictors = cbind(full_sample_w_interact$predictors, meaningless_variable),
-                          kpi = full_sample$kpi)
-    # glm.variance_check <- glm(variance_check$kpi ~ 0 + variance_check$predictors,
-    #                           family = binomial(link="logit"))
-    # variance_check_p_value = summary(glm.variance_check)$coefficients[ncol(variance_check$predictors),
-    #                                                                   "Pr(>|z|)"]
+    # Create arbitrary variable for variance check
+    meaningless_variable.target = rnorm(nrow(rs_targets$predictors)) # for target glm
+    meaningless_variable.full_sample = rnorm(nrow(full_sample_w_interact$predictors)) # for svyglm, interaction model
+    var_check_inputs = create_svyglm_inputs(cbind(full_sample$predictors, meaningless_variable.full_sample),
+                                            full_sample$kpi)
+    var_check_design_func <- svydesign(id = ~1,
+                                  data = var_check_inputs$data,
+                                  weight = weights)
+    
+    # If variances valid, models should reject the null hypothesis 5% of the time
+    p_value.glm_var <- summary(glm(rs_targets$kpi ~ 0 + cbind(rs_targets$predictors,
+                                                          meaningless_variable.target),
+                               family = binomial(link="logit")))$coefficients[(ncol(rs_targets$predictors)+1),
+                                                                              "Pr(>|z|)"]
+    p_value.svyglm_var <- summary(svyglm(formula = var_check_inputs$func,
+                                         design = var_check_design_func,
+                                         family = "quasibinomial"))$coefficients[ncol(full_sample$predictors)+1,
+                                                                                 "Pr(>|t|)"]
+    p_value.ia_var <- summary(glm(full_sample$kpi ~ 0 + cbind(full_sample_w_interact$predictors,
+                                                            meaningless_variable.full_sample),
+                                        family = binomial(link="logit")))$coefficients[ncol(full_sample_w_interact$predictors)+1,
+                                                                                       "Pr(>|z|)"]
     
     
     
@@ -207,8 +231,9 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
     nontarget_glm_results[i,] = glm.nontarget_audience$coefficients
     total_svyglm_results[i,] = svyglm.total_audience$coefficients
     interaction_results[i,] = glm.interaction_model$coefficients
-    #anova_results[i] <- anova(logit.sim.no_interact.weighted,method = "Wald")$p
-    #interaction_model_variance_check[i] = variance_check_p_value
+    var_check_glm[i] = p_value.glm_var
+    var_check_svyglm[i] = p_value.svyglm_var
+    var_check_interaction[i] = p_value.ia_var
     
     # Keep track of which simulation run we are in
     if (i%%100 == 0) {
@@ -226,7 +251,9 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
   li_results$interaction_total_results <- (interaction_results[,1:p]*(1-CPS[target_group_age, target_group_gender])
                                            + CPS[target_group_age, target_group_gender]*(interaction_results[,1:p]
                                                                                          + interaction_results[,(p+1):(2*p)]))
-  li_results$interaction_variance_check <- interaction_model_variance_check
+  li_results$var_check_glm <- var_check_glm
+  li_results$var_check_svyglm <- var_check_svyglm
+  li_results$var_check_interaction <- var_check_interaction
   return(li_results)
 }
 
@@ -240,10 +267,10 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
 #                       target_group_gender = target_gender, target_group_age = target_age,
 #                       kpi = kpi)
 
-target_proportions = c(10, 30, 50, 70, 90)  #5*(2:18)[c(TRUE,FALSE)]
+target_proportions = c(10,90)  #5*(2:18)[c(TRUE,FALSE)]
 for (prop in target_proportions) {
   assign(paste("Q", prop, sep=""), c())
-  assign(paste("Q", prop, sep=""), run_simulation(N = 5000, Q = prop/100, reps = 1000,
+  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 1000,
                                                   target_group_gender = target_gender, target_group_age = target_age,
                                                   kpi = kpi))
 }

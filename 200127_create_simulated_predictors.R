@@ -143,6 +143,14 @@ simulate_population <- function(path,
 path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 
+simulated_nontarget_population = simulate_population(path,
+                                                     5*10^4,
+                                                     target_audience = FALSE,
+                                                     target1_gender_m = TRUE,
+                                                     target1_min_age = 25,
+                                                     target1_max_age = 34)
+
+
 # Create overview of demographic groups over which we can loop
 demographic_groups = rbind(c("Male", 25, 34),
                            c("Male", 35, 44),
