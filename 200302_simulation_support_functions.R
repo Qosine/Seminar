@@ -56,7 +56,7 @@ sigmoid_function <- function(x) 1/(1+exp(-x))
 
 generate_response <- function(predictors, parameters, sample_size) {
   Pr_success <- sigmoid_function( predictors%*%parameters ) # compute Pr(Y=1 | X=x)
-  response <- rbern( n=sample_size, prob=Pr_success ) # draw from corresponding Bernoulli distribution
+  response <- rbinom( n=sample_size, size=1, prob=Pr_success ) # draw from corresponding Ber(p) (= Bin(1,p)) distribution
   return (response)
 }
 
