@@ -120,18 +120,21 @@ initialise_target_group <- function(target_gender = c("Male", "Female"),
   
   if (kpi=="Familiarity") {
     true_target_params = logit.target.familiarity$coefficients
+    true_nontarget_params = logit.nontarget.familiarity$coefficients
   } else if (kpi=="Consideration") {
     true_target_params = logit.target.consideration$coefficients
+    true_nontarget_params = logit.nontarget.consideration$coefficients
   } else if (kpi=="Awareness") {
     true_target_params = logit.target.awareness$coefficients
+    true_nontarget_params = logit.nontarget.awareness$coefficients
   } else {
     print("Invalid KPI selected, breaking program"); break
   }
    
   
   return(list(target_data = readRDS(target_string),
-              true_target_params = true_target_params,
-              true_population_params = compute_population_params(target_gender, target_age, kpi)))
+              target_params = true_target_params,
+              nontarget_params = true_nontarget_params))
 }
 
 ## EVALUATION OF SIMULATION OUTPUT ##

@@ -82,14 +82,15 @@ simulated_targets$kpi = generate_response(simulated_targets$predictors,
                                              true_target_params,
                                              nrow(simulated_targets$predictors) )
 
+# Define variables for real non-target data as well as 'resampled' data
+real_nontargets$predictors = add_constant(separate_predictors_responses(subsamples$nontarget)$predictors)
+real_nontargets$kpi = generate_response(real_nontargets$predictors, true_nontarget_params, nrow(real_nontargets$predictors))
 load("./simulated_nontarget_predictors.RData")
 simulated_nontargets$predictors = add_constant(simulated_nontarget_population)
 simulated_nontargets$kpi = generate_response(simulated_nontargets$predictors,
                                              true_nontarget_params,
                                              nrow(simulated_nontargets$predictors))
 
-# real_nontargets$predictors = add_constant(separate_predictors_responses(subsamples$nontarget)$predictors)
-# real_nontargets$kpi = generate_response(real_nontargets$predictors, true_nontarget_params, nrow(real_nontargets$predictors))
 
 if ( max(mean(simulated_targets$kpi), mean(simulated_nontargets$kpi)) > 0.9 |
      min(mean(simulated_targets$kpi), mean(simulated_nontargets$kpi)) < 0.1 ) {
@@ -106,6 +107,10 @@ reps = 100
 ###################### RUN SIMULATION FUNCTION
 run_simulation <- function(N, Q, reps, target_group_gender = target_gender, target_group_age = target_age, kpi = kpi) {
   
+  # If testing within run_simulation(), uncomment the below
+  target_group_gender = target_gender; target_group_age = target_age
+  N = 7500; Q = 0.5; reps = 100
+  
   # For looped simulation, keep track of which value of Q we are currently on
   print(paste("Q:", Q))
   start_time = Sys.time()
@@ -116,9 +121,9 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
   nontarget_glm_results = data.frame(matrix(0, reps, p))
   total_svyglm_results = data.frame(matrix(0, reps, p))
   interaction_results = data.frame(matrix(0, reps, p*2))
-  var_check_glm = rep(0, reps)
+  var_check.glm_target = rep(0, reps)
   var_check_svyglm = rep(0, reps)
-  var_check_interaction = rep(0, reps)
+  var_check.glm_interaction = rep(0, reps)
   
   # Name columns of results df
   coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
@@ -182,13 +187,17 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
     colnames(interaction) = rename_interaction_columns(colnames(interaction))
     full_sample_w_interact$predictors = cbind(full_sample$predictors, interaction)
     
-    # Fit regular logit for model without interactions
+    # Fit regular logit for target observations
+    # Also fit model under null hypothesis (i.e. model with true parameters) for variance check
     glm.target_audience <- glm(rs_targets$kpi ~ 0 + rs_targets$predictors,
                                family = binomial(link="logit"))
-    glm.nontarget_audience <- glm(rs_nontargets$kpi ~ 0 + rs_nontargets$predictors,
-                                  family = binomial(link="logit"))
+    var_check.glm_target.H0 <- glm(rs_targets$kpi ~ 0 + offset(rs_targets$predictors%*%true_target_params),
+                                   family = binomial(link = "logit"))
+    LRT_statistic.glm_target = 2*abs(logLik(glm.target_audience) - logLik(var_check.glm_target.H0))
+    df.glm_target = length(true_target_params)
+    var_check.glm_target[i] = ( LRT_statistic.glm_target > qchisq(0.95, df.glm_target) )
     
-    # Fit weighted logit for model without interactions
+    # Fit Horvitz-Thompson estimator for full sample with weights
     svy_inputs = create_svyglm_inputs(full_sample$predictors, full_sample$kpi)
     design_func <- svydesign(id = ~1,
                              data = svy_inputs$data,
@@ -197,28 +206,55 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
                                     design =  design_func,
                                     family = "quasibinomial")
     
-    # Fit unweighted logit for model with interactions
-    glm.interaction_model <-  glm(full_sample$kpi ~ 0 + full_sample_w_interact$predictors,
-                                  family = binomial(link="logit"))
+    # Check whether model rejects H0: parameter vector is DGP parameter vector (approximate LRT)
+    # regTermTest uses either a chi-square or a F null distribution
+    # df = Inf refers to denominator df, telling function to use chi-square distribution for LRT
+    # Approximation method is chosen to be able to deal with negative true parameters
+    var_check_svyglm[i] = regTermTest(model = svyglm.total_audience,
+                                      test.terms = (~ constant + v_audiosum + v_digitalsum
+                                                    + v_programsum + v_tvsum + v_vodsum + v_yousum),
+                                      null = true_population_params,
+                                      method = "LRT", df = Inf, lrt.approximation = "saddlepoint")$p
     
-    # Create arbitrary variable for variance check
-    meaningless_variable.target = rnorm(nrow(rs_targets$predictors)) # for target glm
-    meaningless_variable.full_sample = rnorm(nrow(full_sample_w_interact$predictors)) # for svyglm, interaction model
+    # Further check whether model rejects H0: slope of a variable w/o information is zero (exact t-test)
+    meaningless_variable.full_sample = rnorm(nrow(full_sample_w_interact$predictors))
     var_check_inputs = create_svyglm_inputs(cbind(full_sample$predictors, meaningless_variable.full_sample),
                                             full_sample$kpi)
     var_check_design_func <- svydesign(id = ~1,
-                                  data = var_check_inputs$data,
-                                  weight = weights)
+                                       data = var_check_inputs$data,
+                                       weight = weights)
+    p_value.svyglm_var <- summary(svyglm(formula = var_check_inputs$func,
+                                         design = var_check_design_func,
+                                         family = "quasibinomial"))$coefficients[ncol(full_sample$predictors)+1,
+                                                                                 "Pr(>|t|)"]
+    
+    # For reference against the Horvitz-Thompson estimator, fit an ordinary logit for the entire sample
+    glm.total_audience <- glm(full_sample$kpi ~ 0 + full_sample$predictors,
+                              family = binomial(link="logit"))
+    
+    # Fit unweighted logit for model with interactions
+    glm.interaction_model <-  glm(full_sample$kpi ~ 0 + full_sample_w_interact$predictors,
+                                  family = binomial(link="logit"))
+    true_interaction_params = append(true_nontarget_params, (true_target_params-true_nontarget_params) )
+    var_check.glm_interaction.H0 <- glm(full_sample$kpi ~
+                                          0 + offset(full_sample_w_interact$predictors%*%true_interaction_params),
+                                        family = binomial(link = "logit"))
+    LRT_statistic.glm_interaction = 2*abs(logLik(glm.interaction_model) - logLik(var_check.glm_interaction.H0))
+    df.glm_interaction = length(true_interaction_params)
+    var_check.glm_interaction[i] = ( LRT_statistic.glm_interaction > qchisq(0.95, df.glm_interaction) )
+    
+    
+    # Create arbitrary variable for variance check
+    meaningless_variable.target = rnorm(nrow(rs_targets$predictors)) # for target glm
+    
+    
     
     # If variances valid, models should reject the null hypothesis 5% of the time
     p_value.glm_var <- summary(glm(rs_targets$kpi ~ 0 + cbind(rs_targets$predictors,
                                                           meaningless_variable.target),
                                family = binomial(link="logit")))$coefficients[(ncol(rs_targets$predictors)+1),
                                                                               "Pr(>|z|)"]
-    p_value.svyglm_var <- summary(svyglm(formula = var_check_inputs$func,
-                                         design = var_check_design_func,
-                                         family = "quasibinomial"))$coefficients[ncol(full_sample$predictors)+1,
-                                                                                 "Pr(>|t|)"]
+    
     p_value.ia_var <- summary(glm(full_sample$kpi ~ 0 + cbind(full_sample_w_interact$predictors,
                                                             meaningless_variable.full_sample),
                                         family = binomial(link="logit")))$coefficients[ncol(full_sample_w_interact$predictors)+1,
@@ -231,9 +267,9 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
     nontarget_glm_results[i,] = glm.nontarget_audience$coefficients
     total_svyglm_results[i,] = svyglm.total_audience$coefficients
     interaction_results[i,] = glm.interaction_model$coefficients
-    var_check_glm[i] = p_value.glm_var
+    var_check.glm_target[i] = p_value.glm_var
     var_check_svyglm[i] = p_value.svyglm_var
-    var_check_interaction[i] = p_value.ia_var
+    var_check.glm_interaction[i] = p_value.ia_var
     
     # Keep track of which simulation run we are in
     if (i%%100 == 0) {
@@ -251,9 +287,9 @@ run_simulation <- function(N, Q, reps, target_group_gender = target_gender, targ
   li_results$interaction_total_results <- (interaction_results[,1:p]*(1-CPS[target_group_age, target_group_gender])
                                            + CPS[target_group_age, target_group_gender]*(interaction_results[,1:p]
                                                                                          + interaction_results[,(p+1):(2*p)]))
-  li_results$var_check_glm <- var_check_glm
+  li_results$var_check.glm_target <- var_check.glm_target
   li_results$var_check_svyglm <- var_check_svyglm
-  li_results$var_check_interaction <- var_check_interaction
+  li_results$var_check.glm_interaction <- var_check.glm_interaction
   return(li_results)
 }
 
