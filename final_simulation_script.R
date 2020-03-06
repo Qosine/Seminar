@@ -173,6 +173,7 @@ run_simulation <- function(N, Q, reps,
   
   # If testing within run_simulation(), uncomment the below
   # target_group_gender = target_gender; target_group_age = target_age
+  # use_Nielsen_target_data = use_Nielsen_nontarget_data = FALSE
   # N = 7500; Q = 0.5; reps = 100
   
   # For looped simulation, keep track of which value of Q we are currently on
@@ -182,6 +183,7 @@ run_simulation <- function(N, Q, reps,
   # Allocate memory for simulation results
   dimension = ncol(true_fullsample_variables$predictors) + 1 # add dimension for intercept
   beta.glm_target = data.frame(matrix(0, reps, dimension))
+  beta.glm_target.cubic = data.frame(matrix(0, reps, dimension))
   beta.glm_nontarget = data.frame(matrix(0, reps, dimension))
   beta.svyglm = data.frame(matrix(0, reps, dimension))
   beta.glm_interaction = data.frame(matrix(0, reps, dimension*2))
@@ -249,7 +251,11 @@ run_simulation <- function(N, Q, reps,
                                    family = binomial(link = "logit"))
     LRT_statistic.glm_target = 2*abs(logLik(glm.target_audience) - logLik(LRT.glm_target.H0))
     df.LRT.glm_target = length(true_target_params)
-    LRT.glm_target[i] = 
+    
+    # Fit logit with cubic root of predictors
+    rs_targets$predictors.cubic_root = (rs_targets$predictors)^(1/3)
+    glm.target_audience.cubic <- glm(rs_targets$kpi ~ 0 + rs_targets$predictors.cubic_root,
+                                     family = binomial(link="logit"))
     
     # Fit Horvitz-Thompson estimator for full sample with weights
     svy_inputs = create_svyglm_inputs(full_sample$predictors, full_sample$kpi)
@@ -264,11 +270,12 @@ run_simulation <- function(N, Q, reps,
     # regTermTest uses either a chi-square or a F null distribution
     # df = Inf refers to denominator df, telling function to use chi-square distribution for LRT
     # Approximation method is chosen to be able to deal with negative true parameters
-    LRT.svyglm.pvalue = regTermTest(model = svyglm.total_audience,
-                                    test.terms = (~ constant + v_audiosum + v_digitalsum
-                                                  + v_programsum + v_tvsum + v_vodsum + v_yousum),
-                                    null = true_population_params,
-                                    method = "LRT", df = Inf, lrt.approximation = "saddlepoint")$p
+    # LRT.svyglm.pvalue = regTermTest(model = svyglm.total_audience,
+    #                                 test.terms = (~ constant + v_audiosum + v_digitalsum
+    #                                               + v_programsum + v_tvsum + v_vodsum + v_yousum),
+    #                                 null = true_population_params,
+    #                                 method = "LRT", df = Inf, lrt.approximation = "saddlepoint")$p
+    LRT.svyglm.pvalue = 0
     
     # Further check whether model rejects H0: slope of a variable w/o information is zero (exact t-test)
     meaningless_variable.full_sample = rnorm(nrow(interaction_predictors))
@@ -298,7 +305,7 @@ run_simulation <- function(N, Q, reps,
     
     # Store results of current run
     beta.glm_target[i,] = glm.target_audience$coefficients
-    beta.glm_nontarget[i,] = glm.nontarget_audience$coefficients
+    #beta.glm_nontarget[i,] = glm.nontarget_audience$coefficients
     beta.svyglm[i,] = svyglm.total_audience$coefficients
     beta.glm_interaction[i,] = glm.interaction_model$coefficients
     LRT.glm_target[i] = ( LRT_statistic.glm_target > qchisq(0.95, df.LRT.glm_target) )
@@ -316,13 +323,14 @@ run_simulation <- function(N, Q, reps,
   }
   
   # Interaction model does not immediately produce target- or population-level parameters, so derive these first
-  beta.glm.interaction.target <- beta.glm_interaction[,1:p] + beta.glm_interaction[,(p+1):(2*p)]
+  beta.glm.interaction.target <- beta.glm_interaction[,1:dimension] + beta.glm_interaction[,(dimension+1):(2*dimension)]
   target_weight = CPS[target_group_age, target_group_gender]
-  beta.glm.interaction.total <- (beta.glm_interaction[,1:p]*(1-target_weight)
-                                 + target_weight*(beta.glm_interaction[,1:p] + beta.glm_interaction[,(p+1):(2*p)]))
+  beta.glm.interaction.total <- (beta.glm_interaction[,1:dimension]*(1-target_weight)
+                                 + target_weight*(beta.glm_interaction[,1:dimension] + beta.glm_interaction[,(dimension+1):(2*dimension)]))
   
   
   return(list(beta.glm.target_audience_only <- beta.glm_target,
+              beta.glm.target_audience_only.cubic <- beta.glm_target.cubic,
               beta.glm.nontarget_audience_only <- beta.glm_nontarget,
               beta.svyglm.total_audience <- beta.svyglm,
               beta.glm.interaction.target <- beta.glm.interaction.target,
@@ -334,10 +342,10 @@ run_simulation <- function(N, Q, reps,
 }
 
 
-target_proportions = c(10,90)  #5*(2:18)[c(TRUE,FALSE)]
+target_proportions = c(10,50,90)  #5*(2:18)[c(TRUE,FALSE)]
 for (prop in target_proportions) {
   assign(paste("Q", prop, sep=""), c())
-  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 1000,
+  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 10,
                                                   target_group_gender = target_gender, target_group_age = target_age,
                                                   kpi = kpi))
 }
