@@ -328,24 +328,26 @@ run_simulation <- function(N, Q, reps,
   beta.glm.interaction.total <- (beta.glm_interaction[,1:dimension]*(1-target_weight)
                                  + target_weight*(beta.glm_interaction[,1:dimension] + beta.glm_interaction[,(dimension+1):(2*dimension)]))
   
+  out = list()
+  out$beta.glm.target_audience_only <- beta.glm_target
+  out$beta.glm.target_audience_only.cubic <- beta.glm_target.cubic
+  out$beta.glm.nontarget_audience_only <- beta.glm_nontarget
+  out$beta.svyglm.total_audience <- beta.svyglm
+  out$beta.glm.interaction.target <- beta.glm.interaction.target
+  out$beta.glm.interaction.total <- beta.glm.interaction.total
+  out$LRT.glm_target <- LRT.glm_target
+  out$LRT.svyglm <- LRT.svyglm
+  out$ttest.svyglm <- ttest.svyglm
+  out$LRT.glm_interaction <- LRT.glm_interaction
   
-  return(list(beta.glm.target_audience_only <- beta.glm_target,
-              beta.glm.target_audience_only.cubic <- beta.glm_target.cubic,
-              beta.glm.nontarget_audience_only <- beta.glm_nontarget,
-              beta.svyglm.total_audience <- beta.svyglm,
-              beta.glm.interaction.target <- beta.glm.interaction.target,
-              beta.glm.interaction.total <- beta.glm.interaction.total,
-              LRT.glm_target <- LRT.glm_target,
-              LRT.svyglm <- LRT.svyglm,
-              ttest.svyglm <- ttest.svyglm,
-              LRT.glm_interaction <- LRT.glm_interaction))
+  return(out)
 }
 
 
 target_proportions = c(10,50,90)  #5*(2:18)[c(TRUE,FALSE)]
 for (prop in target_proportions) {
   assign(paste("Q", prop, sep=""), c())
-  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 10,
+  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 1000,
                                                   target_group_gender = target_gender, target_group_age = target_age,
                                                   kpi = kpi))
 }
