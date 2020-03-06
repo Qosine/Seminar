@@ -16,8 +16,8 @@ source("./200302_simulation_support_functions.R")
 #       originally derived from the Nielsen data, set boolean ...
 #       use_Nielsen_parameters below to TRUE
 
-true_target_params = c(-1.5, -3, 3.2, -1.0, 0.5, 1.0, .75)
-true_nontarget_params = c(-2.0, 0.6, 0.4, 0.2, 0.1, 0.5, 1)
+true_nontarget_params = c(-1.5, -3, 3.2, -1.0, 0.5, 1.0, .75)
+true_target_params = c(-2.0, 0.6, 0.4, -0.8, 0.6, 0.5, 1)
 
 use_Nielsen_parameters = FALSE
 
@@ -109,7 +109,7 @@ real_targets$kpi = generate_response(real_targets$predictors,
                                      nrow(real_targets$predictors))
 load("./simulated_target_predictors.RData")
 #simulated_target_predictors = necessary_info$target_data
-simulated_targets$predictors = add_constant(simulated_target_predictors)
+simulated_targets$predictors = nthroot(add_constant(simulated_target_predictors),3)
 simulated_targets$kpi = generate_response(simulated_targets$predictors,
                                           true_target_params,
                                           nrow(simulated_targets$predictors))
@@ -120,7 +120,7 @@ real_nontargets$kpi = generate_response(real_nontargets$predictors,
                                         true_nontarget_params,
                                         nrow(real_nontargets$predictors))
 load("./simulated_nontarget_predictors.RData")
-simulated_nontargets$predictors = add_constant(simulated_nontarget_population)
+simulated_nontargets$predictors = nthroot(add_constant(simulated_nontarget_population),3)
 simulated_nontargets$kpi = generate_response(simulated_nontargets$predictors,
                                              true_nontarget_params,
                                              nrow(simulated_nontargets$predictors))
@@ -198,15 +198,18 @@ run_simulation <- function(N, Q, reps,
   
   for (i in 1:reps) {
     
+
     # Compile explanatory variables
     rs_targets = rs_nontargets = list()
     
     if (use_Nielsen_target_data == TRUE) {
-      idx_rs_nontargets = sample( 1:nrow(subsamples$target), N*Q )
+
+      idx_rs_targets = sample( 1:nrow(subsamples$target), (N*Q) )
       rs_targets$predictors = real_targets$predictors[idx_rs_targets,]
       rs_targets$kpi = real_targets$kpi[idx_rs_targets]
     } else {
-      idx_rs_targets = sample( 1:nrow(simulated_targets$predictors), N*Q )
+      idx_rs_targets = sample( 1:nrow(simulated_targets$predictors), (N*Q) )
+
       rs_targets$predictors = simulated_targets$predictors[idx_rs_targets,]
       rs_targets$kpi = simulated_targets$kpi[idx_rs_targets]
     }
@@ -257,7 +260,8 @@ run_simulation <- function(N, Q, reps,
     svyglm.total_audience <- svyglm(formula = svy_inputs$func,
                                     design =  design_func,
                                     family = "quasibinomial")
-    
+    glm.nontarget_audience <- glm(rs_nontargets$kpi ~ 0 + rs_nontargets$predictors,
+                                  family = binomial(link="logit"))
     # Check whether model rejects H0: parameter vector is DGP parameter vector (approximate LRT)
     # regTermTest uses either a chi-square or a F null distribution
     # df = Inf refers to denominator df, telling function to use chi-square distribution for LRT
@@ -297,7 +301,7 @@ run_simulation <- function(N, Q, reps,
     
     # Store results of current run
     beta.glm_target[i,] = glm.target_audience$coefficients
-    #beta.glm_nontarget[i,] = glm.nontarget_audience$coefficients
+    beta.glm_nontarget[i,] = glm.nontarget_audience$coefficients
     beta.svyglm[i,] = svyglm.total_audience$coefficients
     beta.glm_interaction[i,] = glm.interaction_model$coefficients
     LRT.glm_target[i] = ( LRT_statistic.glm_target > qchisq(0.95, df.LRT.glm_target) )
@@ -356,11 +360,11 @@ for (prop in target_proportions) {
   glm_targ_bias = pctBias(true_target_params, as.matrix(estimates$beta.glm.target_audience_only))
   glm_nontarg_bias = pctBias(true_nontarget_params, as.matrix(estimates$beta.glm.nontarget_audience_only))
   svyglm_total_bias = pctBias(true_population_params, as.matrix(estimates$beta.svyglm.total_audience))
-  interaction_targ_bias = pctBias(true_target_params, as.matrix(estimates$interaction_targ_results))
-  interaction_total_bias = pctBias(true_population_params, as.matrix(estimates$interaction_total_results))
+  interaction_targ_bias = pctBias(true_target_params, as.matrix(estimates$beta.glm.interaction.target))
+  interaction_total_bias = pctBias(true_population_params, as.matrix(estimates$beta.glm.interaction.total))
   
-  interaction_nontarget_params = ((estimates$interaction_total_results
-                                  - CPS[target_age, target_gender]*estimates$interaction_targ_results)
+  interaction_nontarget_params = ((estimates$beta.glm.interaction.total
+                                  - CPS[target_age, target_gender]*estimates$beta.glm.interaction.target)
                                   /(1-CPS[target_age, target_gender]))
   interaction_nontarg_bias = pctBias(true_nontarget_params, as.matrix(interaction_nontarget_params))
   
@@ -376,7 +380,7 @@ for (prop in target_proportions) {
 # Note they are identical for target audience since they use same model
 # (regular logit) on the same dataset (target data only)
 round(100*interaction_total_results_df,1)[1:9,]
-round(100*svyglm_total_results_df,1)[1:4,]
+round(100*svyglm_total_results_df,1)[1:5,]
 round(100*(interaction_total_results_df-svyglm_total_results_df),1)[1:8,]
 
 round(100*glm_target_results_df,1)[1:9,]
