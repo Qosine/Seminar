@@ -85,8 +85,8 @@ necessary_info = initialise_target_group(target_gender, target_age, kpi)
 
 # If user chose to use parameters derived from Nielsen source data, override parameter choices
 if (use_Nielsen_parameters == TRUE) {
-  true_target_params = unname(necessary_info$true_target_params)
-  true_nontarget_params = unname(necessary_info$true_nontarget_params)
+  true_target_params = unname(necessary_info$target_params)
+  true_nontarget_params = unname(necessary_info$nontarget_params)
 }
 
 # Compute population-level parameters as linear combination of target and non-target params
