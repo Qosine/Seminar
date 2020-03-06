@@ -125,9 +125,6 @@ simulated_nontargets$kpi = generate_response(simulated_nontargets$predictors,
                                              true_nontarget_params,
                                              nrow(simulated_nontargets$predictors))
 
-
-
-
 #######################################################################
 ######## CHECK IF PARAMETER CHOICE DOES NOT CREATE RARE EVENTS ########
 #######################################################################
@@ -183,7 +180,6 @@ run_simulation <- function(N, Q, reps,
   # Allocate memory for simulation results
   dimension = ncol(true_fullsample_variables$predictors) + 1 # add dimension for intercept
   beta.glm_target = data.frame(matrix(0, reps, dimension))
-  beta.glm_target.cubic = data.frame(matrix(0, reps, dimension))
   beta.glm_nontarget = data.frame(matrix(0, reps, dimension))
   beta.svyglm = data.frame(matrix(0, reps, dimension))
   beta.glm_interaction = data.frame(matrix(0, reps, dimension*2))
@@ -202,25 +198,25 @@ run_simulation <- function(N, Q, reps,
   
   for (i in 1:reps) {
     
-    # Create index of random samples for target and non-target data
-    idx_rs_targets = sample( 1:nrow(simulated_targets$predictors), N*Q )
-    idx_rs_nontargets = sample( 1:nrow(subsamples$nontarget), (N*(1-Q)) )
-    
     # Compile explanatory variables
     rs_targets = rs_nontargets = list()
     
     if (use_Nielsen_target_data == TRUE) {
+      idx_rs_nontargets = sample( 1:nrow(subsamples$target), N*Q )
       rs_targets$predictors = real_targets$predictors[idx_rs_targets,]
       rs_targets$kpi = real_targets$kpi[idx_rs_targets]
     } else {
+      idx_rs_targets = sample( 1:nrow(simulated_targets$predictors), N*Q )
       rs_targets$predictors = simulated_targets$predictors[idx_rs_targets,]
       rs_targets$kpi = simulated_targets$kpi[idx_rs_targets]
     }
     
     if (use_Nielsen_nontarget_data == TRUE) {
+      idx_rs_nontargets = sample( 1:nrow(subsamples$nontarget), (N*(1-Q)) )
       rs_nontargets$predictors = real_nontargets$predictors[idx_rs_nontargets,]
       rs_nontargets$kpi = real_nontargets$kpi[idx_rs_nontargets]
     } else {
+      idx_rs_nontargets = sample( 1:nrow(simulated_nontargets$predictors), (N*(1-Q)) )
       rs_nontargets$predictors = simulated_nontargets$predictors[idx_rs_nontargets,]
       rs_nontargets$kpi = simulated_nontargets$kpi[idx_rs_nontargets]
     }
@@ -252,10 +248,6 @@ run_simulation <- function(N, Q, reps,
     LRT_statistic.glm_target = 2*abs(logLik(glm.target_audience) - logLik(LRT.glm_target.H0))
     df.LRT.glm_target = length(true_target_params)
     
-    # Fit logit with cubic root of predictors
-    rs_targets$predictors.cubic_root = (rs_targets$predictors)^(1/3)
-    glm.target_audience.cubic <- glm(rs_targets$kpi ~ 0 + rs_targets$predictors.cubic_root,
-                                     family = binomial(link="logit"))
     
     # Fit Horvitz-Thompson estimator for full sample with weights
     svy_inputs = create_svyglm_inputs(full_sample$predictors, full_sample$kpi)
@@ -330,7 +322,6 @@ run_simulation <- function(N, Q, reps,
   
   out = list()
   out$beta.glm.target_audience_only <- beta.glm_target
-  out$beta.glm.target_audience_only.cubic <- beta.glm_target.cubic
   out$beta.glm.nontarget_audience_only <- beta.glm_nontarget
   out$beta.svyglm.total_audience <- beta.svyglm
   out$beta.glm.interaction.target <- beta.glm.interaction.target
@@ -347,7 +338,7 @@ run_simulation <- function(N, Q, reps,
 target_proportions = c(10,50,90)  #5*(2:18)[c(TRUE,FALSE)]
 for (prop in target_proportions) {
   assign(paste("Q", prop, sep=""), c())
-  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 1000,
+  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 2,
                                                   target_group_gender = target_gender, target_group_age = target_age,
                                                   kpi = kpi))
 }
