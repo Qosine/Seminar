@@ -187,6 +187,7 @@ run_simulation <- function(N, Q, reps,
   LRT.svyglm = rep(0, reps)
   LRT.glm_interaction = rep(0, reps)
   ttest.svyglm = rep(0, reps)
+  LRT.diffmodel_results = vector()
   
   # Name columns of results df
   coefficient_names = c("Intercept", "Audio", "Digital", "Program", "TV",
@@ -308,6 +309,7 @@ run_simulation <- function(N, Q, reps,
     LRT.svyglm[i] = ( LRT.svyglm.pvalue <= 0.05 )
     ttest.svyglm[i] = ( ttest.svyglm.pvalue <= 0.05 )
     LRT.glm_interaction[i] = ( LRT_statistic.glm_interaction > qchisq(0.95, df.glm_interaction) )
+    LRT.diffmodel_results[i] = ifelse(lr.test(glm.total_audience, glm.interaction_model)$pvalue  == FALSE,0,1)
     
     # Keep track of which simulation run we are in
     if (i%%100 == 0) {
@@ -334,6 +336,7 @@ run_simulation <- function(N, Q, reps,
   out$LRT.svyglm <- LRT.svyglm
   out$ttest.svyglm <- ttest.svyglm
   out$LRT.glm_interaction <- LRT.glm_interaction
+  out$LRT.diffmodel_results <- LRT.diffmodel_results
   
   return(out)
 }
@@ -342,7 +345,7 @@ run_simulation <- function(N, Q, reps,
 target_proportions = c(10,50,90)  #5*(2:18)[c(TRUE,FALSE)]
 for (prop in target_proportions) {
   assign(paste("Q", prop, sep=""), c())
-  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 2,
+  assign(paste("Q", prop, sep=""), run_simulation(N = 7500, Q = prop/100, reps = 10,
                                                   target_group_gender = target_gender, target_group_age = target_age,
                                                   kpi = kpi))
 }
@@ -352,7 +355,8 @@ df_cols = c("Intercept", "Audio", "Digital", "Program", "TV", "VOD", "Youtube")
 glm_target_results_df = data.frame(matrix(0, length(df_rows), length(df_cols)))
 rownames(glm_target_results_df) = df_rows; colnames(glm_target_results_df) = df_cols
 svyglm_total_results_df = interaction_targ_results_df = glm_nontarget_results_df = interaction_total_results_df = interaction_nontarg_results_df = glm_target_results_df
-
+LRT.diffmodel_results_df = data.frame(matrix(0, 1,length(df_rows)))
+colnames(LRT.diffmodel_results_df) = df_rows
 
 for (prop in target_proportions) {
   varname = paste("Q", prop, sep="")
@@ -367,7 +371,7 @@ for (prop in target_proportions) {
                                   - CPS[target_age, target_gender]*estimates$beta.glm.interaction.target)
                                   /(1-CPS[target_age, target_gender]))
   interaction_nontarg_bias = pctBias(true_nontarget_params, as.matrix(interaction_nontarget_params))
-  
+  LRT.diffmodel_results_df[,varname] <- sum(estimates$LRT.diffmodel_results)/length(estimates$LRT.diffmodel_results)
   glm_target_results_df[varname,] = glm_targ_bias
   glm_nontarget_results_df[varname,] = glm_nontarg_bias
   svyglm_total_results_df[varname,] = svyglm_total_bias
@@ -379,9 +383,11 @@ for (prop in target_proportions) {
 # See how the interaction model compares to weighting on total audience
 # Note they are identical for target audience since they use same model
 # (regular logit) on the same dataset (target data only)
-round(100*interaction_total_results_df,1)[1:9,]
-round(100*svyglm_total_results_df,1)[1:5,]
+round(100*interaction_total_results_df,1)[1:3,]
+round(100*svyglm_total_results_df,1)[1:3,]
 round(100*(interaction_total_results_df-svyglm_total_results_df),1)[1:8,]
+
+LRT.diffmodel_results_df
 
 round(100*glm_target_results_df,1)[1:9,]
 round(100*glm_nontarget_results_df,1)[1:9,]
