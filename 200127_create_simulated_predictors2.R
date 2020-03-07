@@ -179,13 +179,21 @@ simulate_population <- function(path,
 # Set path
 path = "."
 #path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
+simulated_target_predictors = simulate_population(path,
+                                                     5*10^4,
+                                                     target_audience = TRUE,
+                                                     target1_gender_m = TRUE,
+                                                     target1_min_age = 25,
+                                                     target1_max_age = 34)
+save(simulated_target_predictors[,-(7:10)], file = "simulated_target_predictors_w_control.RData")
 
-simulated_nontarget_population = simulate_population(path,
+simulated_nontarget_predictors = simulate_population(path,
                                                      5*10^4,
                                                      target_audience = FALSE,
                                                      target1_gender_m = TRUE,
                                                      target1_min_age = 25,
                                                      target1_max_age = 34)
+save(simulated_nontarget_predictors, file = "simulated_nontarget_predictors_w_control.RData")
 
 
 # Create overview of demographic groups over which we can loop
