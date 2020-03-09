@@ -59,7 +59,7 @@ separate_predictors_responses <- function(data) {
   # Return single argument with predictor and response values
   out = list()
   out$predictors = cbind(audiosum, digitalsum, programsum, tvsum, vodsum, yousum,
-                         male, havechildren, age3544, age3544, age55plus, employed,
+                         male, havechildren, age3544, age55plus, employed,
                          income3050,income5075, income75100,income100150, income150200, income2001000,
                          educ2, educ3,
                          etn_cauc, etn_afric, etn_hisp, etn_asian, etn_native, etn_other,
