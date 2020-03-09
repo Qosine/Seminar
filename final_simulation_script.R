@@ -3,9 +3,9 @@ set.seed(123456)
 library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase)
 
 # Pathing - fix this on your machine first (set to local Git directory)
-path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
-path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
-setwd(path)
+# path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
+# path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
+# setwd(path)
 source("./200302_simulation_support_functions.R")
 
 #######################################################################
@@ -16,8 +16,8 @@ source("./200302_simulation_support_functions.R")
 #       originally derived from the Nielsen data, set boolean ...
 #       use_Nielsen_parameters below to TRUE
 
-true_nontarget_params = c(-1.5, -3, 3.2, -1.0, 0.5, 1.0, .75)
-true_target_params = c(-2.0, 0.6, 0.4, -0.8, 0.6, 0.5, 1)
+true_nontarget_params = c(-1.5, -3, 3.2, -1.0, 0.5, 1.0, 0.6)
+true_target_params = c(-2.0, 0.6, 0.5, -0.8, 0.6, 0.4,0.8)
 
 use_Nielsen_parameters = FALSE
 
@@ -104,6 +104,7 @@ real_targets = real_nontargets = simulated_targets = simulated_nontargets = list
 
 # Target data - real (source) as well as simulated (resampled)
 real_targets$predictors = add_constant(separate_predictors_responses(subsamples$target)$predictors)
+real_targets$predictors = (cbind(real_targets$predictors[,-(3:4)], rowSums(real_targets$predictors[,(3:4)])))
 real_targets$kpi = generate_response(real_targets$predictors,
                                      true_target_params,
                                      nrow(real_targets$predictors))
@@ -116,6 +117,7 @@ simulated_targets$kpi = generate_response(simulated_targets$predictors,
 
 # Define variables for real non-target data as well as 'resampled' data
 real_nontargets$predictors = add_constant(separate_predictors_responses(subsamples$nontarget)$predictors)
+real_nontargets$predictors = (cbind(real_nontargets$predictors[,-(3:4)], rowSums(real_nontargets$predictors[,(3:4)])))^(1/3)
 real_nontargets$kpi = generate_response(real_nontargets$predictors,
                                         true_nontarget_params,
                                         nrow(real_nontargets$predictors))
@@ -124,7 +126,40 @@ simulated_nontargets$predictors = nthroot(add_constant(simulated_nontarget_popul
 simulated_nontargets$kpi = generate_response(simulated_nontargets$predictors,
                                              true_nontarget_params,
                                              nrow(simulated_nontargets$predictors))
+res_target <- list()
+res_nontarget <-list()
 
+bias_nontarget <- matrix(0, nrow=20,ncol=7)
+for(j in 1:20){
+  res_target[[j]] <- matrix(0,nrow=1000,ncol =7)
+  res_nontarget[[j]] <- matrix(0,nrow=1000,ncol =7)
+  N= 500+j*100
+  print(paste("Currently for N =:", N))
+  for(i in 1:1000){
+real_targets$predictors = add_constant(separate_predictors_responses(rbind(subsamples$target,subsamples$nontarge))$predictors[sample((1:7500), N),])
+#real_targets$predictors = (cbind(real_targets$predictors[,-(3:4)], rowSums(real_targets$predictors[,(3:4)])))
+real_targets$kpi = generate_response(real_targets$predictors,
+                                     true_target_params,
+                                     nrow(real_targets$predictors))
+real_nontargets$predictors = add_constant(separate_predictors_responses(rbind(subsamples$target,subsamples$nontarge))$predictors)[sample((1:7500), N),]
+#real_nontargets$predictors = (cbind(real_nontargets$predictors[,-(3:4)], rowSums(real_nontargets$predictors[,(3:4)])))
+real_nontargets$kpi = generate_response(real_nontargets$predictors,
+                                        true_nontarget_params,
+                                        nrow(real_nontargets$predictors))
+res_target[[j]][i,] <- glm(real_targets$kpi ~ 0 + real_targets$predictors, family=binomial(link="logit"))$coefficient
+res_nontarget[[j]][i,] <-  glm(real_nontargets$kpi ~ 0 + real_nontargets$predictors, family=binomial(link="logit"))$coefficients
+}
+bias_target[j,] <- (true_target_params - colMeans(res_target[[j]]))/true_target_params
+bias_nontarget[j,] <- (true_nontarget_params - colMeans(res_nontarget[[j]]))/true_nontarget_params
+}
+colnames(bias_target) <- colnames(real_targets$predictors)
+colnames(bias_nontarget) <- colnames(real_targets$predictors)
+rownames(bias_target) <- (c(1:20)*100+500)
+rownames(bias_nontarget) <- (c(1:20)*100+500)
+bias_nontarget <- 100*round(bias_nontarget,3)
+bias_target <- 100*round(bias_target,3)
+colMeans(res_target)
+colMeans(res_nontarget)
 #######################################################################
 ######## CHECK IF PARAMETER CHOICE DOES NOT CREATE RARE EVENTS ########
 #######################################################################
