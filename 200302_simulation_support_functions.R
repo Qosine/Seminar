@@ -15,32 +15,61 @@ split_sample <- function(data,
 }
 
 ## EXPLANATORY VARIABLES / PREDICTORS ##
-separate_predictors_responses <- function(subsample) {
+separate_predictors_responses <- function(data) {
   
   # Extract columns of interest
-  df_contacts = subsample[,93:182]
-  v_familiarity = subsample[,22]
-  v_awareness = subsample[,23]
-  v_consideration = subsample[,24]
+  df_contacts = data[,93:182]
+  familiarity = data[,22]
+  awareness = data[,23]
+  consideration = data[,24]
   
   # Sum across categories
-  v_audiosum = rowSums(df_contacts[,1:5])
-  v_digitalsum = rowSums(df_contacts[,6:12])
-  v_programsum = df_contacts[,13]
-  v_tvsum = rowSums(df_contacts[,14:81])
-  v_vodsum = rowSums(df_contacts[,82:89])
-  v_yousum = df_contacts[,90]
+  audiosum = rowSums(df_contacts[,1:5])
+  digitalsum = rowSums(df_contacts[,6:12])
+  programsum = df_contacts[,13]
+  tvsum = rowSums(df_contacts[,14:81])
+  vodsum = rowSums(df_contacts[,82:89])
+  yousum = df_contacts[,90]
+  
+  # Demographic controls
+  male <- (ifelse(data[,5] == "male", 1,0))
+  havechildren <- (ifelse(data[,7] == "yes", 1,0))
+  age3544 <- (ifelse(data[,4] <=44 & data[,4] >=35, 1,0))
+  age4554 <- (ifelse(data[,4] <=54 & data[,4] >=45, 1,0))
+  age55plus <- (ifelse(data[,4] >=55, 1,0))
+  employed <- (ifelse(data[,12] == "employed", 1,0))
+  income3050 <- (ifelse(data[,13] == "[30,50)", 1,0))
+  income5075 <- (ifelse(data[,13] == "[50,75)", 1,0))
+  income75100 <- (ifelse(data[,13] == "[75,100)", 1,0))
+  income100150 <- (ifelse(data[,13] == "[100,150)", 1,0))
+  income150200 <- (ifelse(data[,13] == "[150,200)", 1,0))
+  income2001000 <- (ifelse(data[,13] == "[200,1000]", 1,0))
+  educ2 <- (ifelse(data[,14] == "secondary", 1,0))
+  educ3 <- (ifelse(data[,14] == "tertiary", 1,0))
+  etn_cauc <- (ifelse(data[,15] == "yes", 1,0))
+  etn_afric <- (ifelse(data[,16] == "yes", 1,0))
+  etn_hisp <- (ifelse(data[,17] == "yes", 1,0))
+  etn_asian <- (ifelse(data[,18] == "yes", 1,0))
+  etn_native <- (ifelse(data[,19] == "yes", 1,0))
+  etn_other <- (ifelse(data[,20] == "yes", 1,0))
+  married <- (ifelse(data[,6] == "married", 1,0))
+  single <- (ifelse(data[,6] == "single", 1,0))
+  separated <- (ifelse(data[,6] == "separated", 1,0))
   
   # Return single argument with predictor and response values
   out = list()
-  out$predictors = cbind(v_audiosum, v_digitalsum, v_programsum, v_tvsum,
-                         v_vodsum, v_yousum)
-  out$familiarity = v_familiarity
-  out$awareness = v_awareness
-  out$consideration = v_consideration
-  
+  out$predictors = cbind(audiosum, digitalsum, programsum, tvsum, vodsum, yousum,
+                         male, havechildren, age3544, age3544, age55plus, employed,
+                         income3050,income5075, income75100,income100150, income150200, income2001000,
+                         educ2, educ3,
+                         etn_cauc, etn_afric, etn_hisp, etn_asian, etn_native, etn_other,
+                         married, single,separated)
+  out$familiarity = familiarity
+  out$awareness = awareness
+  out$consideration = consideration
   return(out)
 }
+
 
 add_constant <- function(sample) {
   constant = rep( 1, max(nrow(sample), ncol(sample)) )
