@@ -227,40 +227,37 @@ fit_target_audience_models <- function(X_wo_demographics, X_w_demographics, X_di
   return(out)
 }
 
-obs_sizes = 100*(5:25)#[c(TRUE,FALSE)]
-for (obs in obs_sizes) {
-  print(paste("Observations:", obs))
-  assign(paste("obs", obs, sep=""), c())
-  assign(paste("obs", obs, sep=""), run_bootstrap(data_wo_Dem, data_w_Dem, data_digiprog_summed,
-                                                   target_params_wo_Dem, target_params_w_Dem,
-                                                   target_params_wo_Dem[1:6], nontarget_params_wo_Dem,
-                                                   sample_size = obs, n_bootstraps = 1000))
-}
-
-df_rows = paste("obs", obs_sizes, sep = "")
-df_cols = c("Intercept", "Audio", "Digital", "Program", "TV", "VOD", "Youtube")
-glm_target_wo_Dem_df = data.frame(matrix(0, length(df_rows), length(target_params_wo_Dem)))
-glm_target_w_Dem_df = data.frame(matrix(0, length(df_rows), length(target_params_w_Dem)))
-rownames(glm_target_wo_Dem_df) = df_rows; colnames(glm_target_wo_Dem_df)[1:7] = df_cols
-rownames(glm_target_w_Dem_df) = df_rows; colnames(glm_target_w_Dem_df)[1:7] = df_cols
-glm_target_sqrt_df = glm_target_wo_Dem_df
-glm_target_sum_Digiprog_df = glm_target_wo_Dem_df[,1:6]
-
-for (obs in obs_sizes) {
-  varname = paste("obs", obs, sep="")
-  estimates = get(varname)
-  wo_Dem_bias = pctBias(target_params_wo_Dem, as.matrix(estimates$glm.target.no_demographics))
-  w_Dem_bias = pctBias(target_params_w_Dem, as.matrix(estimates$glm.target.demographics))
-  sqrt_bias = pctBias(target_params_wo_Dem, as.matrix(estimates$glm.target.sqrt))
-  sum_Digiprog_bias = pctBias(target_params_wo_Dem[1:6], as.matrix(estimates$glm.target.sum_Digiprog))
-  glm_target_wo_Dem_df[varname,] = wo_Dem_bias
-  glm_target_w_Dem_df[varname,] = w_Dem_bias
-  glm_target_sqrt_df[varname,] = sqrt_bias
-  glm_target_sum_Digiprog_df[varname,] = sum_Digiprog_bias
-}
-
-
-
+# obs_sizes = 100*(5:25)#[c(TRUE,FALSE)]
+# for (obs in obs_sizes) {
+#   print(paste("Observations:", obs))
+#   assign(paste("obs", obs, sep=""), c())
+#   assign(paste("obs", obs, sep=""), run_bootstrap(data_wo_Dem, data_w_Dem, data_digiprog_summed,
+#                                                    target_params_wo_Dem, target_params_w_Dem,
+#                                                    target_params_wo_Dem[1:6], nontarget_params_wo_Dem,
+#                                                    sample_size = obs, n_bootstraps = 1000))
+# }
+# 
+# df_rows = paste("obs", obs_sizes, sep = "")
+# df_cols = c("Intercept", "Audio", "Digital", "Program", "TV", "VOD", "Youtube")
+# glm_target_wo_Dem_df = data.frame(matrix(0, length(df_rows), length(target_params_wo_Dem)))
+# glm_target_w_Dem_df = data.frame(matrix(0, length(df_rows), length(target_params_w_Dem)))
+# rownames(glm_target_wo_Dem_df) = df_rows; colnames(glm_target_wo_Dem_df)[1:7] = df_cols
+# rownames(glm_target_w_Dem_df) = df_rows; colnames(glm_target_w_Dem_df)[1:7] = df_cols
+# glm_target_sqrt_df = glm_target_wo_Dem_df
+# glm_target_sum_Digiprog_df = glm_target_wo_Dem_df[,1:6]
+# 
+# for (obs in obs_sizes) {
+#   varname = paste("obs", obs, sep="")
+#   estimates = get(varname)
+#   wo_Dem_bias = pctBias(target_params_wo_Dem, as.matrix(estimates$glm.target.no_demographics))
+#   w_Dem_bias = pctBias(target_params_w_Dem, as.matrix(estimates$glm.target.demographics))
+#   sqrt_bias = pctBias(target_params_wo_Dem, as.matrix(estimates$glm.target.sqrt))
+#   sum_Digiprog_bias = pctBias(target_params_wo_Dem[1:6], as.matrix(estimates$glm.target.sum_Digiprog))
+#   glm_target_wo_Dem_df[varname,] = wo_Dem_bias
+#   glm_target_w_Dem_df[varname,] = w_Dem_bias
+#   glm_target_sqrt_df[varname,] = sqrt_bias
+#   glm_target_sum_Digiprog_df[varname,] = sum_Digiprog_bias
+# }
 
 fit_total_audience_models <- function(X_w_demographics,
                                       beta_target, beta_nontarget,
@@ -370,7 +367,12 @@ fit_total_audience_models <- function(X_w_demographics,
 }
 
 
-test = fit_total_audience_models(data_w_Dem,
-                                 target_params_w_Dem, nontarget_params_w_Dem,
-                                 sample_size_total = 5000, sample_size_target = 2000,
-                                 n_bootstraps = 1000)
+for (N in c(2500, 3000, 4000, 5000)) {
+  for (Q in c(0.5, 0.6, 0.7, 0.8)) {
+    assign(paste("N", N, "Q", Q, sep=""),
+           fit_total_audience_models(data_w_Dem,
+                                     target_params_w_Dem, nontarget_params_w_Dem,
+                                     sample_size_total = N, sample_size_target = (N*Q),
+                                     n_bootstraps = 1000))
+  }
+}
