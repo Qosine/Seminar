@@ -276,8 +276,8 @@ fit_total_audience_models <- function(X_w_demographics,
   
   for (i in 1:n_bootstraps) {
     
-    idx_target = sample(1:nrow(X_w_demographics), sample_size_total, replace=T)
-    idx_nontarget = sample(setdiff(1:nrow(X_w_demographics), idx_target), sample_size_total, replace=T)
+    idx_target = sample(1:nrow(X_w_demographics), sample_size_target, replace=T)
+    idx_nontarget = sample(setdiff(1:nrow(X_w_demographics), idx_target), (sample_size_total-sample_size_target), replace=T)
     
     # Compile random sample
     target_data = nontarget_data = full_sample = list()
@@ -366,15 +366,17 @@ fit_total_audience_models <- function(X_w_demographics,
   return(out)
 }
 
+
+
 if (TRUE) {
-  for (N in c(2500, 3000)) {
+  for (N in c(3000)) {
     print(paste("N:", N))
-    for (Q in 5*(10:16)) {
+    for (Q in 5*(8:18)) {
       print(paste("Q:", Q))
       assign(paste("N", N, "_Q", Q, sep=""),
              fit_total_audience_models(data_w_Dem,
                                        target_params_w_Dem, nontarget_params_w_Dem,
-                                       sample_size_total = N, sample_size_target = (N*Q),
+                                       sample_size_total = N, sample_size_target = (N*Q/100),
                                        n_bootstraps = 1000))
     }
   }
