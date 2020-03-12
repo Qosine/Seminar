@@ -88,6 +88,11 @@ generate_response <- function(predictors, parameters, sample_size) {
   return (response)
 }
 
+predict_response <- function(predictors, parameters, threshold) {
+  fitted_probabilities = sigmoid_function(predictors%*%parameters)
+  return(as.numeric( fitted_probabilities>threshold ))
+}
+
 ## WEIGHTS ##
 compute_weights <- function(target_sample_proportion,
                             target_CPS_proportion,
