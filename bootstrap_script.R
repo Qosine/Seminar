@@ -74,7 +74,7 @@ ncol_to_add = dim(data_w_Dem)[2] - dim(data_wo_Dem)[2]
 
 target_params_wo_Dem = c(-2.0, 0.6, 1.2, -0.5, 0.7, 0.8,0.4)
 demographics_params = c(.31, .96, .71, -.66, .99, -.32, 1.44, 1.04,
-                        1.86, 1.34, -1.36, -0.93, -1.30, -1.22, -1.92, 0.75, -1.27,
+                        1.86, 1.34, -1.36, -0.93, -1.22, -1.92, 0.75, -1.27,
                         -1.41, 0.37, -1.98, -0.56, 1.48)
 target_params_w_Dem = append(target_params_wo_Dem, demographics_params)
 
@@ -276,8 +276,8 @@ fit_total_audience_models <- function(X_w_demographics,
   
   for (i in 1:n_bootstraps) {
     
-    idx_target = sample(1:nrow(X_w_demographics), sample_size_total, replace=T)
-    idx_nontarget = sample(setdiff(1:nrow(X_w_demographics), idx_target), sample_size_total, replace=T)
+    idx_target = sample(1:nrow(X_w_demographics), sample_size_target, replace=T)
+    idx_nontarget = sample(setdiff(1:nrow(X_w_demographics), idx_target), (sample_size_total-sample_size_target), replace=T)
     
     # Compile random sample
     target_data = nontarget_data = full_sample = list()
@@ -367,12 +367,37 @@ fit_total_audience_models <- function(X_w_demographics,
 }
 
 
-for (N in c(2500, 3000, 4000, 5000)) {
-  for (Q in c(0.5, 0.6, 0.7, 0.8)) {
-    assign(paste("N", N, "Q", Q, sep=""),
-           fit_total_audience_models(data_w_Dem,
-                                     target_params_w_Dem, nontarget_params_w_Dem,
-                                     sample_size_total = N, sample_size_target = (N*Q),
-                                     n_bootstraps = 1000))
+
+if (TRUE) {
+  for (N in c(3000)) {
+    print(paste("N:", N))
+    for (Q in 5*(8:18)) {
+      print(paste("Q:", Q))
+      assign(paste("N", N, "_Q", Q, sep=""),
+             fit_total_audience_models(data_w_Dem,
+                                       target_params_w_Dem, nontarget_params_w_Dem,
+                                       sample_size_total = N, sample_size_target = (N*Q/100),
+                                       n_bootstraps = 1000))
+    }
   }
 }
+
+c <- c("N2500_Q50","N2500_Q55","N2500_Q60","N2500_Q65","N2500_Q70","N2500_Q75","N2500_Q80",
+       "N3000_Q50","N3000_Q55","N3000_Q60","N3000_Q65","N3000_Q70","N3000_Q75","N3000_Q80")
+p = dim(N2500_Q50$svyglm.total_audience)[2]
+svyglm_res <- matrix(0,nrow = length(c), ncol=p)
+rownames(svyglm_res) <- c
+total_w_interaction_res <- matrix(0,nrow = length(c), ncol=p)
+rownames(total_w_interaction_res) <- c
+target_w_interaction_res <- matrix(0,nrow = length(c), ncol=p)
+rownames(target_w_interaction_res) <- c
+LRT_results = c()
+
+for(i in c){
+  estimates <- get(i)
+  svyglm_res[i,] <- pctBias(true_population_params, estimates$svyglm.total_audience)
+  total_w_interaction_res[i,] <- pctBias(true_population_params, estimates$glm.interaction_total_audience)
+  target_w_interaction_res[i,] <- pctBias(target_params_w_Dem, estimates$glm.interaction_target_audience)
+  LRT_results = append(LRT_results, mean(estimates$LRT.interaction_model))
+}
+

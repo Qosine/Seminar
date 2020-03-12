@@ -1,6 +1,6 @@
 # Fix seed and load libraries
 set.seed(123456)
-library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase)
+library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase); library(Rfast)
 
 # Pathing - fix this on your machine first (set to local Git directory)
 # path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
@@ -110,7 +110,7 @@ real_targets$kpi = generate_response(real_targets$predictors,
                                      nrow(real_targets$predictors))
 load("./simulated_target_predictors.RData")
 #simulated_target_predictors = necessary_info$target_data
-simulated_targets$predictors = nthroot(add_constant(simulated_target_predictors),3)
+simulated_targets$predictors = add_constant(simulated_target_predictors)
 simulated_targets$kpi = generate_response(simulated_targets$predictors,
                                           true_target_params,
                                           nrow(simulated_targets$predictors))
@@ -128,7 +128,7 @@ simulated_nontargets$kpi = generate_response(simulated_nontargets$predictors,
                                              nrow(simulated_nontargets$predictors))
 res_target <- list()
 res_nontarget <-list()
-
+bias_target <- matrix(0, nrow=20,ncol=7)
 bias_nontarget <- matrix(0, nrow=20,ncol=7)
 for(j in 1:20){
   res_target[[j]] <- matrix(0,nrow=1000,ncol =7)
@@ -149,17 +149,35 @@ real_nontargets$kpi = generate_response(real_nontargets$predictors,
 res_target[[j]][i,] <- glm(real_targets$kpi ~ 0 + real_targets$predictors, family=binomial(link="logit"))$coefficient
 res_nontarget[[j]][i,] <-  glm(real_nontargets$kpi ~ 0 + real_nontargets$predictors, family=binomial(link="logit"))$coefficients
 }
-bias_target[j,] <- (true_target_params - colMeans(res_target[[j]]))/true_target_params
-bias_nontarget[j,] <- (true_nontarget_params - colMeans(res_nontarget[[j]]))/true_nontarget_params
+bias_target[j,] <- (colMeans(res_target[[j]])-true_target_params)/true_target_params
+bias_nontarget[j,] <- (colMeans(res_nontarget[[j]])-true_nontarget_params)/true_nontarget_params
 }
+standardized_bias <- vector()
+for( j in 1:20){
+  standardized_bias[j] <-  100*sqrt(t(colMeans(res_nontarget[[j]])-true_nontarget_params) %*% solve(var(res_nontarget[[j]])) %*% (colMeans(res_nontarget[[j]])-true_nontarget_params))
+}
+standardized_bias_res <- cbind((c(1:20)*100+500),standardized_bias)
+colnames(standardized_bias_res) <- c("Observations", "bias")
+ggplot(as.data.frame(standardized_bias_res), aes(x=Observations, y=Bias, main="text") ) + 
+  geom_line(aes(y = bias, color="bias"),show.legend= FALSE) +
+  ggtitle("Standardized bias for target audience") 
+
 colnames(bias_target) <- colnames(real_targets$predictors)
 colnames(bias_nontarget) <- colnames(real_targets$predictors)
 rownames(bias_target) <- (c(1:20)*100+500)
 rownames(bias_nontarget) <- (c(1:20)*100+500)
-bias_nontarget <- 100*round(bias_nontarget,3)
-bias_target <- 100*round(bias_target,3)
-colMeans(res_target)
-colMeans(res_nontarget)
+bias_nontarget2 <- 100*round(bias_nontarget,3)
+bias_target2 <- 100*round(bias_target,3)
+abs_bias <- abs(bias_nontarget2)
+resgraph <- cbind((c(1:20)*100+500),rowMaxs(abs_bias, value = TRUE), rowMeans(abs_bias))
+colnames(resgraph) <- c("Observations","Max", "Mean")
+ggplot(as.data.frame(resgraph), aes(x=Observations, y=Bias)  ) + 
+  geom_line(aes(y = Max, color="red"),show.legend= TRUE) +
+  geom_line(aes(y = Mean, color="blue"),show.legend= TRUE)  +
+    ggtitle("Max and mean bias for target audience") +
+  scale_color_discrete(name = "Legend", labels = c("Mean", "Max")) 
+  theme(legend.text = element_text(size=15),axis.text = element_text(angle=0, hjust=1, size = 19), panel.background = element_blank(),panel.grid.major.y = element_line( size=.1, color="grey" ) ,axis.line = element_line(colour = "black"),axis.title=element_text(size=18))
+
 #######################################################################
 ######## CHECK IF PARAMETER CHOICE DOES NOT CREATE RARE EVENTS ########
 #######################################################################

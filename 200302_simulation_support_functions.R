@@ -44,7 +44,6 @@ separate_predictors_responses <- function(data) {
   income100150 <- (ifelse(data[,13] == "[100,150)", 1,0))
   income150200 <- (ifelse(data[,13] == "[150,200)", 1,0))
   income2001000 <- (ifelse(data[,13] == "[200,1000]", 1,0))
-  educ2 <- (ifelse(data[,14] == "secondary", 1,0))
   educ3 <- (ifelse(data[,14] == "tertiary", 1,0))
   etn_cauc <- (ifelse(data[,15] == "yes", 1,0))
   etn_afric <- (ifelse(data[,16] == "yes", 1,0))
@@ -61,7 +60,7 @@ separate_predictors_responses <- function(data) {
   out$predictors = cbind(audiosum, digitalsum, programsum, tvsum, vodsum, yousum,
                          male, havechildren, age3544, age55plus, employed,
                          income3050,income5075, income75100,income100150, income150200, income2001000,
-                         educ2, educ3,
+                         educ3,
                          etn_cauc, etn_afric, etn_hisp, etn_asian, etn_native, etn_other,
                          married, single,separated)
   out$familiarity = familiarity
@@ -172,4 +171,12 @@ MSE <- function(true_beta, estimates) { (estimates-true_beta)%*%t(estimates-true
 Bias <- function(beta_true, beta_hat) {colMeans(beta_hat) - beta_true}
 pctBias <- function(beta_true, beta_hat) {abs((colMeans(beta_hat) - beta_true)/beta_true)}
 medianBias <- function(beta_true, beta_hat) {abs((colMedians(beta_hat) - beta_true)/beta_true)}
+standardisedBias <- function(beta_true, beta_hat) {
+  return( t(colMeans(beta_hat)-beta_true)%*%solve(var(beta_hat))%*%(colMeans(beta_hat)-beta_true) )
+}
+standardisedBias <- function(beta_true, beta_hat) {
+  return( (colMeans(beta_hat)-beta_true)/sqrt(diag(var(beta_hat))))
+}
+
+## PROCESS RESULTS ##
 
