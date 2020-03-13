@@ -479,7 +479,8 @@ c <- c("significant_N2500_Q40","significant_N2500_Q45","significant_N2500_Q50","
 #       "insignificant_N5000_Q40","insignificant_N5000_Q45","insignificant_N5000_Q50","insignificant_N5000_Q55","insignificant_N5000_Q60","insignificant_N5000_Q65","insignificant_N5000_Q70","insignificant_N5000_Q75","insignificant_N5000_Q80","insignificant_N5000_Q85","insignificant_N5000_Q90")
 true_population_params <- true_population_params_sig
 #true_population_params <- true_population_params_insig
-
+setwd("./Plots_significant")
+#setwd("./Plots_insignificant")
 
 cols <- c("/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB",
           "/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB")
