@@ -353,7 +353,7 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
                                     family = "quasibinomial")
     svyglm.total_audience.Wald = regTermTest(svyglm.total_audience,
                                              test.terms = ~ constant + audiosum + digitalsum + programsum + tvsum + vodsum + yousum + male + havechildren + age3544 + age55plus + employed + income3050 + income5075 + income75100 + income100150 + income150200 + income2001000 + educ3 + etn_cauc + etn_afric + etn_hisp + etn_asian + etn_native + etn_other + married + single + separated,
-                                             null = true_population_params,
+                                             null = beta_population,
                                              method = "Wald")
     
     # Fit interaction model
@@ -442,21 +442,21 @@ if (TRUE) {
                                        n_bootstraps = 1000))
     }
   }
-  save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
+  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
   
-  ##### Insignificant parameters
-  for (N in c(2500,3000,4000,5000)) {
-    print(paste("N:", N))
-    for (Q in 5*(8:18)) {
-      print(paste("Q:", Q))
-      assign(paste("insignificant_N", N, "_Q", Q, sep=""),
-             fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
-                                       target_params_insig_w_Dem, nontarget_params_w_Dem, true_population_params_insig,
-                                       sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_bootstraps = 1000))
-    }
-  }
-  save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_insignificant.RData")
+  # ##### Insignificant parameters
+  # for (N in c(2500,3000,4000,5000)) {
+  #   print(paste("N:", N))
+  #   for (Q in 5*(8:18)) {
+  #     print(paste("Q:", Q))
+  #     assign(paste("insignificant_N", N, "_Q", Q, sep=""),
+  #            fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
+  #                                      target_params_insig_w_Dem, nontarget_params_w_Dem, true_population_params_insig,
+  #                                      sample_size_total = N, sample_size_target = (N*Q/100),
+  #                                      n_bootstraps = 1000))
+  #   }
+  # }
+  # save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_insignificant.RData")
 }
 
 
