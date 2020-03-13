@@ -5,7 +5,7 @@ library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(rob
 # Pathing - fix this on your machine first (set to local Git directory)
 path = "C:/Users/marcs/OneDrive/Bureaublad/Master/Seminar/Seminar/GitHub/Seminar"
 # path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
-path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
+#path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 setwd(path)
 source("./200302_simulation_support_functions.R")
 
@@ -74,7 +74,7 @@ data_sqrt = data_wo_Dem^.5
 ncol_to_add = dim(data_w_Dem)[2] - dim(data_wo_Dem)[2]
 
 target_params_wo_Dem = c(-2.0, 0.6, 1.2, -0.5, 0.7, 0.8, 0.4)
-target_params_insig = c(-1.0, 0.02, 1.2, -0.5, 0.01, 0.8, -0.02)
+target_params_insig = c(-2.0, 0.6, 1.2, -0.5, 0.7, 0.8, 0.05)
 demographics_params = c(.31, .96, .71, -.66, .99, -.32, 1.44, 1.04,
                         1.86, 1.34, -1.36, -0.93, -1.22, -1.92, 0.75, -1.27,
                         -1.41, 0.37, -1.98, -0.56, 1.48)
@@ -431,32 +431,32 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
 if (TRUE) {
   
   ##### Significant parameters
-  for (N in c(2500,3000,4000,5000)) {
-    print(paste("N:", N))
-    for (Q in 5*(8:18)) {
-      print(paste("Q:", Q))
-      assign(paste("significant_N", N, "_Q", Q, sep=""),
-             fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
-                                       target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
-                                       sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_bootstraps = 1000))
-    }
-  }
-  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
-  
-  # ##### Insignificant parameters
   # for (N in c(2500,3000,4000,5000)) {
   #   print(paste("N:", N))
   #   for (Q in 5*(8:18)) {
   #     print(paste("Q:", Q))
-  #     assign(paste("insignificant_N", N, "_Q", Q, sep=""),
+  #     assign(paste("significant_N", N, "_Q", Q, sep=""),
   #            fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
-  #                                      target_params_insig_w_Dem, nontarget_params_w_Dem, true_population_params_insig,
+  #                                      target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
   #                                      sample_size_total = N, sample_size_target = (N*Q/100),
   #                                      n_bootstraps = 1000))
   #   }
   # }
-  # save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_insignificant.RData")
+  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
+  
+  ##### Insignificant parameters
+  for (N in c(5000)) {
+    print(paste("N:", N))
+    for (Q in 5*(8:18)) {
+      print(paste("Q:", Q))
+      assign(paste("insignificant_N", N, "_Q", Q, sep=""),
+             fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
+                                       target_params_insig_w_Dem, nontarget_params_w_Dem, true_population_params_insig,
+                                       sample_size_total = N, sample_size_target = (N*Q/100),
+                                       n_bootstraps = 1000))
+    }
+  }
+  save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_insignificant.RData")
 }
 
 
@@ -467,358 +467,364 @@ if (TRUE) {
 
 
 
+#tables:
+#toggle sigficant or insignificant
+c <- c("significant_N2500_Q40","significant_N2500_Q45","significant_N2500_Q50","significant_N2500_Q55","significant_N2500_Q60","significant_N2500_Q65","significant_N2500_Q70","significant_N2500_Q75","significant_N2500_Q80","significant_N2500_Q85","significant_N2500_Q90",
+       "significant_N3000_Q40","significant_N3000_Q45","significant_N3000_Q50","significant_N3000_Q55","significant_N3000_Q60","significant_N3000_Q65","significant_N3000_Q70","significant_N3000_Q75","significant_N3000_Q80","significant_N3000_Q85","significant_N3000_Q90", 
+       "significant_N4000_Q40","significant_N4000_Q45","significant_N4000_Q50","significant_N4000_Q55","significant_N4000_Q60","significant_N4000_Q65","significant_N4000_Q70","significant_N4000_Q75","significant_N4000_Q80","significant_N4000_Q85","significant_N4000_Q90",
+       "significant_N5000_Q40","significant_N5000_Q45","significant_N5000_Q50","significant_N5000_Q55","significant_N5000_Q60","significant_N5000_Q65","significant_N5000_Q70","significant_N5000_Q75","significant_N5000_Q80","significant_N5000_Q85","significant_N5000_Q90")
+#c <- c("insignificant_N2500_Q40","insignificant_N2500_Q45","insignificant_N2500_Q50","insignificant_N2500_Q55","insignificant_N2500_Q60","insignificant_N2500_Q65","insignificant_N2500_Q70","insignificant_N2500_Q75","insignificant_N2500_Q80","insignificant_N2500_Q85","insignificant_N2500_Q90",
+#       "insignificant_N3000_Q40","insignificant_N3000_Q45","insignificant_N3000_Q50","insignificant_N3000_Q55","insignificant_N3000_Q60","insignificant_N3000_Q65","insignificant_N3000_Q70","insignificant_N3000_Q75","insignificant_N3000_Q80","insignificant_N3000_Q85","insignificant_N3000_Q90", 
+#       "insignificant_N4000_Q40","insignificant_N4000_Q45","insignificant_N4000_Q50","insignificant_N4000_Q55","insignificant_N4000_Q60","insignificant_N4000_Q65","insignificant_N4000_Q70","insignificant_N4000_Q75","insignificant_N4000_Q80","insignificant_N4000_Q85","insignificant_N4000_Q90",
+#       "insignificant_N5000_Q40","insignificant_N5000_Q45","insignificant_N5000_Q50","insignificant_N5000_Q55","insignificant_N5000_Q60","insignificant_N5000_Q65","insignificant_N5000_Q70","insignificant_N5000_Q75","insignificant_N5000_Q80","insignificant_N5000_Q85","insignificant_N5000_Q90")
+true_population_params <- true_population_params_sig
+#true_population_params <- true_population_params_insig
+
+
+cols <- c("/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB",
+          "/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB")
+svyglm_res <- matrix(0,nrow = length(c), ncol=28)
+rownames(svyglm_res) <- c
+total_w_interaction_res <- matrix(0,nrow = length(c), ncol=28)
+rownames(total_w_interaction_res) <- c
+target_w_interaction_res <- matrix(0,nrow = length(c), ncol=28)
+rownames(target_w_interaction_res) <- c
+svy_glm_dif <- matrix(0,nrow = length(c), ncol=28)
+rownames(svy_glm_dif) <- c
+LRT_res <- vector()
+
+est_int_total <- list()
+est_int_svy <- list()
+est_int_target <- list()
+j =1
+
+for(i in c){
+  estimates <- get(i)
+  estimates$glm.interaction_total_audience[abs(estimates$glm.interaction_total_audience)>100]=NA
+  estimates$svyglm.total_audience[abs(estimates$svyglm.total_audience)>100]=NA
+  estimates$glm.interaction_target_audience[abs(estimates$glm.interaction_target_audience)>100]=NA
+  svyglm_res[i,] <- abs((colMeans(estimates$svyglm.total_audience, na.rm = TRUE)-true_population_params)/true_population_params)
+  total_w_interaction_res[i,] <- abs((colMeans(estimates$glm.interaction_total_audience, na.rm = TRUE)-true_population_params)/true_population_params)
+  target_w_interaction_res[i,] <- abs((colMeans(estimates$glm.interaction_target_audience, na.rm = TRUE)-target_params_w_Dem)/target_params_w_Dem)
+  
+  est_int_total[[j]] <- (estimates$glm.interaction_total_audience)
+  est_int_svy[[j]] <- (estimates$svyglm.total_audience)
+  est_int_target[[j]] <- (estimates$glm.interaction_target_audience)
+  LRT_res[j] <- sum(estimates$LRT.interaction_model)
+  j=j+1
+}
+
+Q <- c(8:18)*0.05
+
+glm_standardized_bias <- vector()
+glm_standardized_bias_ind_max <-vector()
+glm_standardized_bias_ind_mean <-vector()
+glm_standardized_bias_ind_mean_D <- vector()
+
+intera_standardized_bias <- vector()
+intera_standardized_bias_ind_max <-vector()
+intera_standardized_bias_ind_mean <-vector()
+intera_standardized_bias_ind_mean_D <- vector()
+
+intera_target_standardized_bias <- vector()
+intera_target_standardized_bias_ind_max <-vector()
+intera_target_standardized_bias_ind_mean <-vector()
+intera_target_standardized_bias_ind_mean_D <- vector()
+
+for( j in 1:44){
+  
+  glm_standardized_bias[j] <-  100*sqrt(t(colMeans(est_int_svy[[j]], na.rm=T) - true_population_params) %*% solve(var(est_int_svy[[j]], na.rm=TRUE)) %*% (colMeans(est_int_svy[[j]],na.rm=T)-true_population_params))
+  glm_standardized_bias_ind_mean[j] <-   mean(abs(100*(colMeans(est_int_svy[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_svy[[j]][,1:14],na.rm=T))))
+  glm_standardized_bias_ind_max[j] <-     max(abs(100*(colMeans(est_int_svy[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_svy[[j]][,1:14],na.rm=T))))
+  glm_standardized_bias_ind_mean_D[j] <- mean(abs(100*(colMeans(est_int_svy[[j]][,15:28],na.rm=T)-true_population_params[15:28])/diag(var(est_int_svy[[j]][,15:28],na.rm=T))))
+  
+  intera_standardized_bias[j] <-  100*sqrt(t(colMeans(est_int_total[[j]], na.rm=T) - true_population_params) %*% solve(var(est_int_total[[j]], na.rm=TRUE)) %*% (colMeans(est_int_total[[j]],na.rm=T)-true_population_params))
+  intera_standardized_bias_ind_mean[j] <-   mean(abs(100*(colMeans(est_int_total[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_total[[j]][,1:14],na.rm=T))))
+  intera_standardized_bias_ind_max[j] <-     max(abs(100*(colMeans(est_int_total[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_total[[j]][,1:14],na.rm=T))))
+  intera_standardized_bias_ind_mean_D[j] <-mean(abs(100*(colMeans(est_int_total[[j]][,15:28],na.rm=T)-true_population_params[15:28])/diag(var(est_int_total[[j]][,15:28],na.rm=T))))
+  
+  intera_target_standardized_bias[j] <-  100*sqrt(t(colMeans(est_int_target[[j]], na.rm=T) - target_params_w_Dem) %*% solve(var(est_int_target[[j]], na.rm=TRUE)) %*% (colMeans(est_int_target[[j]],na.rm=T)-target_params_w_Dem))
+  intera_target_standardized_bias_ind_mean[j] <-   mean(abs(100*(colMeans(est_int_target[[j]][,1:14],na.rm=T)-target_params_w_Dem[1:14])/diag(var(est_int_target[[j]][,1:14],na.rm=T))))
+  intera_target_standardized_bias_ind_max[j] <-     max(abs(100*(colMeans(est_int_target[[j]][,1:14],na.rm=T)-target_params_w_Dem[1:14])/diag(var(est_int_target[[j]][,1:14],na.rm=T))))
+  intera_target_standardized_bias_ind_mean_D[j] <-mean(abs(100*(colMeans(est_int_target[[j]][,15:28],na.rm=T)-target_params_w_Dem[15:28])/diag(var(est_int_target[[j]][,15:28],na.rm=T))))
+  
+}
+# Standardised Biases
+SB_result_mat <- matrix(0, nrow=11, ncol=12)
+rownames(SB_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+SB_result_mat[,1] <- glm_standardized_bias[1:11]
+SB_result_mat[,2] <- glm_standardized_bias[12:22]
+SB_result_mat[,3] <- glm_standardized_bias[23:33]
+SB_result_mat[,4] <- glm_standardized_bias[34:44]
+
+SB_result_mat[,5] <- intera_target_standardized_bias[1:11]
+SB_result_mat[,6] <- intera_target_standardized_bias[12:22]
+SB_result_mat[,7] <- intera_target_standardized_bias[23:33]
+SB_result_mat[,8] <- intera_target_standardized_bias[34:44]
+
+SB_result_mat[,9] <- intera_standardized_bias[1:11]
+SB_result_mat[,10] <- intera_standardized_bias[12:22]
+SB_result_mat[,11] <- intera_standardized_bias[23:33]
+SB_result_mat[,12] <- intera_standardized_bias[34:44]
+
+
+# N = 2500
+N2500_result_mat <- matrix(0, nrow=11, ncol=12)
+rownames(N2500_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N2500_result_mat) = cols
+# SVYGLM results
+N2500_result_mat[,1] <- round(rowMeans(100*svyglm_res[1:11,1:14]),2)
+N2500_result_mat[,2] <- round(glm_standardized_bias_ind_mean[1:11], 2)
+N2500_result_mat[,3] <- round(rowMaxs(100*svyglm_res[1:11,1:14], value = TRUE),2)
+N2500_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[1:11,1:14], value = FALSE)]
+N2500_result_mat[,5] <- round(rowMeans(100*svyglm_res[1:11,15:28]),2)
+N2500_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[1:11],2)
+# Interaction total results
+N2500_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[1:11,1:14]),2)
+N2500_result_mat[,8] <- round(intera_standardized_bias_ind_mean[1:11], 2)
+N2500_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[1:11,1:14], value = TRUE),2)
+N2500_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[1:11,1:14], value = FALSE)]
+N2500_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[1:11,15:28]),2)
+N2500_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[1:11],2)
 
 
 
-# #tables:
-# c <- c("N2500_Q40","N2500_Q45","N2500_Q50","N2500_Q55","N2500_Q60","N2500_Q65","N2500_Q70","N2500_Q75","N2500_Q80","N2500_Q85","N2500_Q90",
-#        "N3000_Q40","N3000_Q45","N3000_Q50","N3000_Q55","N3000_Q60","N3000_Q65","N3000_Q70","N3000_Q75","N3000_Q80","N3000_Q85","N3000_Q90", 
-#        "N4000_Q40","N4000_Q45","N4000_Q50","N4000_Q55","N4000_Q60","N4000_Q65","N4000_Q70","N4000_Q75","N4000_Q80","N4000_Q85","N4000_Q90",
-#        "N5000_Q40","N5000_Q45","N5000_Q50","N5000_Q55","N5000_Q60","N5000_Q65","N5000_Q70","N5000_Q75","N5000_Q80","N5000_Q85","N5000_Q90")
-# cols <- c("/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB",	
-#           "/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB")
-# svyglm_res <- matrix(0,nrow = length(c), ncol=28)
-# rownames(svyglm_res) <- c
-# total_w_interaction_res <- matrix(0,nrow = length(c), ncol=28)
-# rownames(total_w_interaction_res) <- c
-# target_w_interaction_res <- matrix(0,nrow = length(c), ncol=28)
-# rownames(target_w_interaction_res) <- c
-# svy_glm_dif <- matrix(0,nrow = length(c), ncol=28)
-# rownames(svy_glm_dif) <- c
-# LRT_res <- vector()
-# 
-# est_int_total <- list()
-# est_int_svy <- list()
-# est_int_target <- list()
-# j =1
-# 
-# for(i in c){
-#   estimates <- get(i)  
-#   estimates$glm.interaction_total_audience[abs(estimates$glm.interaction_total_audience)>100]=NA
-#   estimates$svyglm.total_audience[abs(estimates$svyglm.total_audience)>100]=NA
-#   estimates$glm.interaction_target_audience[abs(estimates$glm.interaction_target_audience)>100]=NA
-#   svyglm_res[i,] <- abs((colMeans(estimates$svyglm.total_audience, na.rm = TRUE)-true_population_params)/true_population_params)
-#   total_w_interaction_res[i,] <- abs((colMeans(estimates$glm.interaction_total_audience, na.rm = TRUE)-true_population_params)/true_population_params)
-#   target_w_interaction_res[i,] <- abs((colMeans(estimates$glm.interaction_target_audience, na.rm = TRUE)-target_params_w_Dem)/target_params_w_Dem)
-#   
-#   est_int_total[[j]] <- (estimates$glm.interaction_total_audience)
-#   est_int_svy[[j]] <- (estimates$svyglm.total_audience)
-#   est_int_target[[j]] <- (estimates$glm.interaction_target_audience)
-#   LRT_res[j] <- sum(estimates$LRT.interaction_model)
-#   j=j+1
-# }
-# 
-# Q <- c(8:18)*0.05
-# 
-# glm_standardized_bias <- vector()
-# glm_standardized_bias_ind_max <-vector()
-# glm_standardized_bias_ind_mean <-vector()
-# glm_standardized_bias_ind_mean_D <- vector()
-# 
-# intera_standardized_bias <- vector()
-# intera_standardized_bias_ind_max <-vector()
-# intera_standardized_bias_ind_mean <-vector()
-# intera_standardized_bias_ind_mean_D <- vector()
-# 
-# intera_target_standardized_bias <- vector()
-# intera_target_standardized_bias_ind_max <-vector()
-# intera_target_standardized_bias_ind_mean <-vector()
-# intera_target_standardized_bias_ind_mean_D <- vector()
-# 
-# for( j in 1:44){
-#   
-#   glm_standardized_bias[j] <-  100*sqrt(t(colMeans(est_int_svy[[j]], na.rm=T) - true_population_params) %*% solve(var(est_int_svy[[j]], na.rm=TRUE)) %*% (colMeans(est_int_svy[[j]],na.rm=T)-true_population_params))
-#   glm_standardized_bias_ind_mean[j] <-   mean(abs(100*(colMeans(est_int_svy[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_svy[[j]][,1:14],na.rm=T))))
-#   glm_standardized_bias_ind_max[j] <-     max(abs(100*(colMeans(est_int_svy[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_svy[[j]][,1:14],na.rm=T))))
-#   glm_standardized_bias_ind_mean_D[j] <- mean(abs(100*(colMeans(est_int_svy[[j]][,15:28],na.rm=T)-true_population_params[15:28])/diag(var(est_int_svy[[j]][,15:28],na.rm=T))))
-#   
-#   intera_standardized_bias[j] <-  100*sqrt(t(colMeans(est_int_total[[j]], na.rm=T) - true_population_params) %*% solve(var(est_int_total[[j]], na.rm=TRUE)) %*% (colMeans(est_int_total[[j]],na.rm=T)-true_population_params))
-#   intera_standardized_bias_ind_mean[j] <-   mean(abs(100*(colMeans(est_int_total[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_total[[j]][,1:14],na.rm=T))))
-#   intera_standardized_bias_ind_max[j] <-     max(abs(100*(colMeans(est_int_total[[j]][,1:14],na.rm=T)-true_population_params[1:14])/diag(var(est_int_total[[j]][,1:14],na.rm=T))))
-#   intera_standardized_bias_ind_mean_D[j] <-mean(abs(100*(colMeans(est_int_total[[j]][,15:28],na.rm=T)-true_population_params[15:28])/diag(var(est_int_total[[j]][,15:28],na.rm=T))))
-#   
-#   intera_target_standardized_bias[j] <-  100*sqrt(t(colMeans(est_int_target[[j]], na.rm=T) - target_params_w_Dem) %*% solve(var(est_int_target[[j]], na.rm=TRUE)) %*% (colMeans(est_int_target[[j]],na.rm=T)-target_params_w_Dem))
-#   intera_target_standardized_bias_ind_mean[j] <-   mean(abs(100*(colMeans(est_int_target[[j]][,1:14],na.rm=T)-target_params_w_Dem[1:14])/diag(var(est_int_target[[j]][,1:14],na.rm=T))))
-#   intera_target_standardized_bias_ind_max[j] <-     max(abs(100*(colMeans(est_int_target[[j]][,1:14],na.rm=T)-target_params_w_Dem[1:14])/diag(var(est_int_target[[j]][,1:14],na.rm=T))))
-#   intera_target_standardized_bias_ind_mean_D[j] <-mean(abs(100*(colMeans(est_int_target[[j]][,15:28],na.rm=T)-target_params_w_Dem[15:28])/diag(var(est_int_target[[j]][,15:28],na.rm=T))))
-#   
-# }
-# # Standardised Biases
-# SB_result_mat <- matrix(0, nrow=11, ncol=12)
-# rownames(SB_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# SB_result_mat[,1] <- glm_standardized_bias[1:11]
-# SB_result_mat[,2] <- glm_standardized_bias[12:22]
-# SB_result_mat[,3] <- glm_standardized_bias[23:33]
-# SB_result_mat[,4] <- glm_standardized_bias[34:44]
-# 
-# SB_result_mat[,5] <- intera_target_standardized_bias[1:11]
-# SB_result_mat[,6] <- intera_target_standardized_bias[12:22]
-# SB_result_mat[,7] <- intera_target_standardized_bias[23:33]
-# SB_result_mat[,8] <- intera_target_standardized_bias[34:44]
-# 
-# SB_result_mat[,9] <- intera_standardized_bias[1:11]
-# SB_result_mat[,10] <- intera_standardized_bias[12:22]
-# SB_result_mat[,11] <- intera_standardized_bias[23:33]
-# SB_result_mat[,12] <- intera_standardized_bias[34:44]
-# 
-# 
-# # N = 2500
-# N2500_result_mat <- matrix(0, nrow=11, ncol=12)
-# rownames(N2500_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N2500_result_mat) = cols
-# # SVYGLM results
-# N2500_result_mat[,1] <- round(rowMeans(100*svyglm_res[1:11,1:14]),2)
-# N2500_result_mat[,2] <- round(glm_standardized_bias_ind_mean[1:11], 2)
-# N2500_result_mat[,3] <- round(rowMaxs(100*svyglm_res[1:11,1:14], value = TRUE),2)
-# N2500_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[1:11,1:14], value = FALSE)]
-# N2500_result_mat[,5] <- round(rowMeans(100*svyglm_res[1:11,15:28]),2)
-# N2500_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[1:11],2)
-# # Interaction total results
-# N2500_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[1:11,1:14]),2)
-# N2500_result_mat[,8] <- round(intera_standardized_bias_ind_mean[1:11], 2)
-# N2500_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[1:11,1:14], value = TRUE),2)
-# N2500_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[1:11,1:14], value = FALSE)]
-# N2500_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[1:11,15:28]),2)
-# N2500_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[1:11],2)
-# 
-# 
-# 
-# # N = 3000 
-# N3000_result_mat <- matrix(0, nrow=11, ncol=12)
-# rownames(N3000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N3000_result_mat) = cols
-# # SVYGLM results
-# N3000_result_mat[,1] <- round(rowMeans(100*svyglm_res[12:22,1:14]),2)
-# N3000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[12:22], 2)
-# N3000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[12:22,1:14], value = TRUE),2)
-# N3000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[12:22,1:14], value = FALSE)]
-# N3000_result_mat[,5] <- round(rowMeans(100*svyglm_res[12:22,15:28]),2)
-# N3000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[12:22],2)
-# # Interaction total results
-# N3000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[12:22,1:14]),2)
-# N3000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[12:22], 2)
-# N3000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[12:22,1:14], value = TRUE),2)
-# N3000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[12:22,1:14], value = FALSE)]
-# N3000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[12:22,15:28]),2)
-# N3000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[12:22],2)
-# 
-# 
-# 
-# # N = 4000
-# N4000_result_mat <- matrix(0, nrow=11, ncol=12)
-# rownames(N4000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N4000_result_mat) = cols
-# # SVYGLM results
-# N4000_result_mat[,1] <- round(rowMeans(100*svyglm_res[23:33,1:14]),2)
-# N4000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[23:33], 2)
-# N4000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[23:33,1:14], value = TRUE),2)
-# N4000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[23:33,1:14], value = FALSE)]
-# N4000_result_mat[,5] <- round(rowMeans(100*svyglm_res[23:33,15:28]),2)
-# N4000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[23:33],2)
-# # Interaction total results
-# N4000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[23:33,1:14]),2)
-# N4000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[23:33], 2)
-# N4000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[23:33,1:14], value = TRUE),2)
-# N4000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[23:33,1:14], value = FALSE)]
-# N4000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[23:33,15:28]),2)
-# N4000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[23:33],2)
-# 
-# 
-# 
-# # N = 5000
-# N5000_result_mat <- matrix(0, nrow=11, ncol=12)
-# rownames(N5000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N5000_result_mat) = cols
-# # SVYGLM results
-# N5000_result_mat[,1] <- round(rowMeans(100*svyglm_res[34:44,1:14]),2)
-# N5000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[34:44], 2)
-# N5000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[34:44,1:14], value = TRUE),2)
-# N5000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[34:44,1:14], value = FALSE)]
-# N5000_result_mat[,5] <- round(rowMeans(100*svyglm_res[34:44,15:28]),2)
-# N5000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[34:44],2)
-# # Interaction total results
-# N5000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[34:44,1:14]),2)
-# N5000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[34:44], 2)
-# N5000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[34:44,1:14], value = TRUE),2)
-# N5000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[34:44,1:14], value = FALSE)]
-# N5000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[34:44,15:28]),2)
-# N5000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[34:44],2)
-# 
-# 
-# 
-# # Interaction Target glm
-# 
-# # N = 2500
-# N2500_result_mat_target <- matrix(0, nrow=11, ncol=6)
-# rownames(N2500_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N2500_result_mat_target) = cols[1:6]
-# N2500_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[1:11,1:14]),2)
-# N2500_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[1:11], 2)
-# N2500_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[1:11,1:14], value = TRUE),2)
-# N2500_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[1:11,1:14], value = FALSE)]
-# N2500_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[1:11,15:28]),2)
-# N2500_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[1:11],2)
-# 
-# # N = 3000 
-# N3000_result_mat_target <- matrix(0, nrow=11, ncol=6)
-# rownames(N3000_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N3000_result_mat_target) = cols[1:6]
-# N3000_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[12:22,1:14]),2)
-# N3000_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[12:22], 2)
-# N3000_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[12:22,1:14], value = TRUE),2)
-# N3000_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[12:22,1:14], value = FALSE)]
-# N3000_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[12:22,15:28]),2)
-# N3000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[12:22],2)
-# 
-# # N = 4000
-# N4000_result_mat_target <- matrix(0, nrow=11, ncol=6)
-# rownames(N4000_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N4000_result_mat_target) = cols[1:6]
-# N4000_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[23:33,1:14]),2)
-# N4000_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[23:33], 2)
-# N4000_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[23:33,1:14], value = TRUE),2)
-# N4000_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[23:33,1:14], value = FALSE)]
-# N4000_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[23:33,15:28]),2)
-# N4000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[23:33],2)
-# 
-# # N = 5000
-# N5000_result_mat_target <- matrix(0, nrow=11, ncol=6)
-# rownames(N5000_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-# colnames(N5000_result_mat_target) = cols[1:6]
-# N5000_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[34:44,1:14]),2)
-# N5000_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[34:44], 2)
-# N5000_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[34:44,1:14], value = TRUE),2)
-# N5000_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[34:44,1:14], value = FALSE)]
-# N5000_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[34:44,15:28]),2)
-# N5000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[34:44],2)
-# 
-# 
-# # Standardised Biases
-# print(xtable(SB_result_mat, type = "latex"), file = "SB_results.tex")
-# 
-# # SVYGLM & Interaction Total 
-# print(xtable(N2500_result_mat, type = "latex"), file = "N2500_results.tex")
-# print(xtable(N3000_result_mat, type = "latex"), file = "N3000_results.tex")
-# print(xtable(N4000_result_mat, type = "latex"), file = "N4000_results.tex")
-# print(xtable(N5000_result_mat, type = "latex"), file = "N5000_results.tex")
-# 
-# # Interaction Target 
-# print(xtable(N2500_result_mat_target, type = "latex"), file = "N2500_target_results.tex")
-# print(xtable(N3000_result_mat_target, type = "latex"), file = "N3000_target_results.tex")
-# print(xtable(N4000_result_mat_target, type = "latex"), file = "N4000_target_results.tex")
-# print(xtable(N5000_result_mat_target, type = "latex"), file = "N5000_target_results.tex")
-# 
-# 
-# 
-# 
-# #Grahps for interaction and svyglm percentage bias
-# N_obs <- c("2500","3000","4000","5000")
-# save_name_IA <- c("MaxMean_IA_2500.png","MaxMean_IA_3000.png","MaxMean_IA_4000.png","MaxMean_IA_5000.png")
-# save_name_svy <- c("MaxMean_svy_2500.png","MaxMean_svy_3000.png","MaxMean_svy_4000.png","MaxMean_svy_5000.png")
-# svy_grahps <- list()
-# IA_graphs <- list()
-# for(i in 1:4){
-# IA_res <- cbind(Q,cbind(rowMeans(100*round(total_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
-#                         rowMaxs(100*round(total_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE),
-#                         rowMeans(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
-#                         rowMaxs(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE)))
-# colnames(IA_res) <- c("Q", "Total_mean", "Total_max","Target_mean", "Target_max")
-# 
-# svy_res <- cbind(Q,cbind(rowMeans(100*round(svyglm_res[(1+(i-1)*11):(i*11),1:14],2)),
-#                          rowMaxs(100*round(svyglm_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE),
-#                          rowMeans(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
-#                          rowMaxs(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE)))
-# colnames(svy_res) <- c("Q", "Svyglm_Mean", "Svyglm_Max","Target_Mean", "Target_Max")
-# 
-# temp_IA <- melt(IA_res[1:11,-1])
-# temp_IA$Q <- rep(Q,4)
-# colnames(temp_IA) <- c("Var1","Legend", "Bias","Q")
-# 
-# temp_svy <- melt(svy_res[1:11,-1])
-# temp_svy$Q <- rep(Q,2)
-# colnames(temp_svy) <- c("Var1","Legend", "Bias","Q")
-# 
-# 
-# 
-# 
-# # ggplot for interaction
-# IA_graphs[[i]] <- ggplot(temp_IA, aes(x=Q, y= Bias, colour = Legend))+
-#   geom_point()+
-#   geom_line() +
-#   ggtitle(paste("Max and mean bias for interaction model with", N_obs[i] ,"observations ", sep = " ")) +
-#   theme(plot.title = element_text(hjust = 0.5)) +
-#   theme_light() +
-#   ylim(0,60) +
-#   theme(panel.grid.major.y = element_line( size=.1, color="grey" ) ,
-#         axis.line = element_line(colour = "black"),plot.title = element_text(size=10, face = "bold"),
-#         legend.position="right", legend.text = element_text(size=10), 
-#         panel.grid = element_blank(), legend.background = element_rect(linetype = 1, size = 0.5, colour = 1),
-#         axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank())
-# ggsave(save_name_IA[i])
-# 
-# # ggplot for svyglm
-# svy_grahps[[i]] <- ggplot(temp_svy, aes(x=Q, y= Bias, colour = Legend))+
-#   geom_point()+
-#   geom_line() +
-#   ggtitle(paste("Max and mean bias for interaction model with", N_obs[i] ,"observations ", sep = " ")) +
-#   theme(plot.title = element_text(hjust = 0.5)) +
-#   theme_light() +
-#   ylim(0,50) +
-#   theme(panel.grid.major.y = element_line( size=.1, color="grey" ) ,
-#         axis.line = element_line(colour = "black"),plot.title = element_text(size=10, face = "bold"),
-#         legend.position="right", legend.text = element_text(size=10), 
-#         panel.grid = element_blank(), legend.background = element_rect(linetype = 1, size = 0.5, colour = 1),
-#         axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank())
-# ggsave(save_name_svy[i])
-# }
-# ggarrange(svy_grahps[[1]],svy_grahps[[4]], common.legend = TRUE, legend="bottom")
-# ggsave("svy_graphs_2500_5000.png")
-# ggarrange(svy_grahps[[2]],svy_grahps[[3]], common.legend = TRUE, legend="bottom")
-# ggsave("svy_graphs_3000_4000.png")
-# ggarrange(IA_graphs[[2]],IA_graphs[[3]], common.legend = TRUE, legend="bottom")
-# ggsave("IA_graphs_3000_4000.png")
-# ggarrange(IA_graphs[[1]],IA_graphs[[4]], common.legend = TRUE, legend="bottom")
-# ggsave("IA_graphs_2500_5000.png")
-# 
-# 
-# 
-# #standardized bias graph
-# N_obs <- c("2500","3000","4000","5000")
-# save_name_IA <- c("MaxMean_IA_2500.png","MaxMean_IA_3000.png","MaxMean_IA_4000.png","MaxMean_IA_5000.png")
-# save_name_svy <- c("MaxMean_svy_2500.png","MaxMean_svy_3000.png","MaxMean_svy_4000.png","MaxMean_svy_5000.png")
-# stdbias_graphs <- list()
-# 
-# for(i in 1:4){
-#   stdbias_res <- cbind(Q,cbind(glm_standardized_bias[(1+(i-1)*11):(i*11)],
-#                           (intera_standardized_bias[(1+(i-1)*11):(i*11)]),
-#                           (intera_target_standardized_bias[(1+(i-1)*11):(i*11)])))
-#   colnames(stdbias_res) <- c("Q", "Survey", "Total interaction","Target interaction")
-#   
-#   temp_IA <- melt(stdbias_res[1:11,-1])
-#   temp_IA$Q <- rep(Q,3)
-#   colnames(temp_IA) <- c("Var1","Legend", "Bias","Q")
-#   
-#   # ggplot for standardized bias
-#   stdbias_graphs[[i]] <- ggplot(temp_IA, aes(x=Q, y= Bias, colour = Legend))+
-#     geom_point()+
-#     geom_line() +
-#     ggtitle(paste("Standardized bias with", N_obs[i] ,"observations ", sep = " ")) +
-#     theme(plot.title = element_text(hjust = 0.5)) +
-#     theme_light() +
-#     ylim(0,150) +
-#     theme(panel.grid.major.y = element_line( size=.1, color="grey" ) ,
-#           axis.line = element_line(colour = "black"),plot.title = element_text(size=10, face = "bold"),
-#           legend.position="right", legend.text = element_text(size=10), 
-#           panel.grid = element_blank(), legend.background = element_rect(linetype = 1, size = 0.5, colour = 1),
-#           axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank())
-#   
-#   
-# }
-# ggarrange(stdbias_graphs[[1]], stdbias_graphs[[2]],stdbias_graphs[[3]],stdbias_graphs[[4]], common.legend = TRUE, legend="bottom")
-# ggsave("stdbias_graph.png")
-# 
-# #LRT result
-# LRT_res_fin <- 100*round(cbind(LRT_res[1:11],LRT_res[12:22],LRT_res[23:33],LRT_res[34:44])/1000,3)
-# rownames(LRT_res_fin) <-  c(8:18)*0.05
-# colnames(LRT_res_fin) <- c("2500","3000", "4000","5000")
-# print(xtable(LRT_res_fin, type = "latex"), file = "LRT_results.tex")
+# N = 3000
+N3000_result_mat <- matrix(0, nrow=11, ncol=12)
+rownames(N3000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N3000_result_mat) = cols
+# SVYGLM results
+N3000_result_mat[,1] <- round(rowMeans(100*svyglm_res[12:22,1:14]),2)
+N3000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[12:22], 2)
+N3000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[12:22,1:14], value = TRUE),2)
+N3000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[12:22,1:14], value = FALSE)]
+N3000_result_mat[,5] <- round(rowMeans(100*svyglm_res[12:22,15:28]),2)
+N3000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[12:22],2)
+# Interaction total results
+N3000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[12:22,1:14]),2)
+N3000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[12:22], 2)
+N3000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[12:22,1:14], value = TRUE),2)
+N3000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[12:22,1:14], value = FALSE)]
+N3000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[12:22,15:28]),2)
+N3000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[12:22],2)
+
+
+
+# N = 4000
+N4000_result_mat <- matrix(0, nrow=11, ncol=12)
+rownames(N4000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N4000_result_mat) = cols
+# SVYGLM results
+N4000_result_mat[,1] <- round(rowMeans(100*svyglm_res[23:33,1:14]),2)
+N4000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[23:33], 2)
+N4000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[23:33,1:14], value = TRUE),2)
+N4000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[23:33,1:14], value = FALSE)]
+N4000_result_mat[,5] <- round(rowMeans(100*svyglm_res[23:33,15:28]),2)
+N4000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[23:33],2)
+# Interaction total results
+N4000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[23:33,1:14]),2)
+N4000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[23:33], 2)
+N4000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[23:33,1:14], value = TRUE),2)
+N4000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[23:33,1:14], value = FALSE)]
+N4000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[23:33,15:28]),2)
+N4000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[23:33],2)
+
+
+
+# N = 5000
+N5000_result_mat <- matrix(0, nrow=11, ncol=12)
+rownames(N5000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N5000_result_mat) = cols
+# SVYGLM results
+N5000_result_mat[,1] <- round(rowMeans(100*svyglm_res[34:44,1:14]),2)
+N5000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[34:44], 2)
+N5000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[34:44,1:14], value = TRUE),2)
+N5000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[34:44,1:14], value = FALSE)]
+N5000_result_mat[,5] <- round(rowMeans(100*svyglm_res[34:44,15:28]),2)
+N5000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[34:44],2)
+# Interaction total results
+N5000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[34:44,1:14]),2)
+N5000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[34:44], 2)
+N5000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[34:44,1:14], value = TRUE),2)
+N5000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[34:44,1:14], value = FALSE)]
+N5000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[34:44,15:28]),2)
+N5000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[34:44],2)
+
+
+
+# Interaction Target glm
+
+# N = 2500
+N2500_result_mat_target <- matrix(0, nrow=11, ncol=6)
+rownames(N2500_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N2500_result_mat_target) = cols[1:6]
+N2500_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[1:11,1:14]),2)
+N2500_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[1:11], 2)
+N2500_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[1:11,1:14], value = TRUE),2)
+N2500_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[1:11,1:14], value = FALSE)]
+N2500_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[1:11,15:28]),2)
+N2500_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[1:11],2)
+
+# N = 3000
+N3000_result_mat_target <- matrix(0, nrow=11, ncol=6)
+rownames(N3000_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N3000_result_mat_target) = cols[1:6]
+N3000_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[12:22,1:14]),2)
+N3000_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[12:22], 2)
+N3000_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[12:22,1:14], value = TRUE),2)
+N3000_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[12:22,1:14], value = FALSE)]
+N3000_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[12:22,15:28]),2)
+N3000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[12:22],2)
+
+# N = 4000
+N4000_result_mat_target <- matrix(0, nrow=11, ncol=6)
+rownames(N4000_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N4000_result_mat_target) = cols[1:6]
+N4000_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[23:33,1:14]),2)
+N4000_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[23:33], 2)
+N4000_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[23:33,1:14], value = TRUE),2)
+N4000_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[23:33,1:14], value = FALSE)]
+N4000_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[23:33,15:28]),2)
+N4000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[23:33],2)
+
+# N = 5000
+N5000_result_mat_target <- matrix(0, nrow=11, ncol=6)
+rownames(N5000_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N5000_result_mat_target) = cols[1:6]
+N5000_result_mat_target[,1] <- round(rowMeans(100*target_w_interaction_res[34:44,1:14]),2)
+N5000_result_mat_target[,2] <- round(intera_target_standardized_bias_ind_mean[34:44], 2)
+N5000_result_mat_target[,3] <- round(rowMaxs(100*target_w_interaction_res[34:44,1:14], value = TRUE),2)
+N5000_result_mat_target[,4] <- colnames(data_w_Dem)[rowMaxs(100*target_w_interaction_res[34:44,1:14], value = FALSE)]
+N5000_result_mat_target[,5] <- round(rowMeans(100*target_w_interaction_res[34:44,15:28]),2)
+N5000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[34:44],2)
+
+
+# Standardised Biases
+print(xtable(SB_result_mat, type = "latex"), file = "SB_results.tex")
+
+# SVYGLM & Interaction Total
+print(xtable(N2500_result_mat, type = "latex"), file = "N2500_results.tex")
+print(xtable(N3000_result_mat, type = "latex"), file = "N3000_results.tex")
+print(xtable(N4000_result_mat, type = "latex"), file = "N4000_results.tex")
+print(xtable(N5000_result_mat, type = "latex"), file = "N5000_results.tex")
+
+# Interaction Target
+print(xtable(N2500_result_mat_target, type = "latex"), file = "N2500_target_results.tex")
+print(xtable(N3000_result_mat_target, type = "latex"), file = "N3000_target_results.tex")
+print(xtable(N4000_result_mat_target, type = "latex"), file = "N4000_target_results.tex")
+print(xtable(N5000_result_mat_target, type = "latex"), file = "N5000_target_results.tex")
+
+
+
+
+#Grahps for interaction and svyglm percentage bias
+N_obs <- c("2500","3000","4000","5000")
+save_name_IA <- c("MaxMean_IA_2500.png","MaxMean_IA_3000.png","MaxMean_IA_4000.png","MaxMean_IA_5000.png")
+save_name_svy <- c("MaxMean_svy_2500.png","MaxMean_svy_3000.png","MaxMean_svy_4000.png","MaxMean_svy_5000.png")
+svy_grahps <- list()
+IA_graphs <- list()
+for(i in 1:4){
+  IA_res <- cbind(Q,cbind(rowMeans(100*round(total_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
+                          rowMaxs(100*round(total_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE),
+                          rowMeans(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
+                          rowMaxs(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE)))
+  colnames(IA_res) <- c("Q", "Total_mean", "Total_max","Target_mean", "Target_max")
+  
+  svy_res <- cbind(Q,cbind(rowMeans(100*round(svyglm_res[(1+(i-1)*11):(i*11),1:14],2)),
+                           rowMaxs(100*round(svyglm_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE),
+                           rowMeans(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
+                           rowMaxs(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE)))
+  colnames(svy_res) <- c("Q", "Svyglm_Mean", "Svyglm_Max","Target_Mean", "Target_Max")
+  
+  temp_IA <- melt(IA_res[1:11,-1])
+  temp_IA$Q <- rep(Q,4)
+  colnames(temp_IA) <- c("Var1","Legend", "Bias","Q")
+  
+  temp_svy <- melt(svy_res[1:11,-1])
+  temp_svy$Q <- rep(Q,2)
+  colnames(temp_svy) <- c("Var1","Legend", "Bias","Q")
+  
+  
+  
+  
+  # ggplot for interaction
+  IA_graphs[[i]] <- ggplot(temp_IA, aes(x=Q, y= Bias, colour = Legend))+
+    geom_point()+
+    geom_line() +
+    ggtitle(paste("Max and mean bias for interaction model with", N_obs[i] ,"observations ", sep = " ")) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme_light() +
+    ylim(0,30) +
+    theme(panel.grid.major.y = element_line( size=.1, color="grey" ) ,
+          axis.line = element_line(colour = "black"),plot.title = element_text(size=10, face = "bold"),
+          legend.position="right", legend.text = element_text(size=10),
+          panel.grid = element_blank(), legend.background = element_rect(linetype = 1, size = 0.5, colour = 1),
+          axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank())
+  ggsave(save_name_IA[i])
+  
+  # ggplot for svyglm
+  svy_grahps[[i]] <- ggplot(temp_svy, aes(x=Q, y= Bias, colour = Legend))+
+    geom_point()+
+    geom_line() +
+    ggtitle(paste("Max and mean bias for weighted model with", N_obs[i] ,"observations ", sep = " ")) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme_light() +
+    ylim(0,30) +
+    theme(panel.grid.major.y = element_line( size=.1, color="grey" ) ,
+          axis.line = element_line(colour = "black"),plot.title = element_text(size=10, face = "bold"),
+          legend.position="right", legend.text = element_text(size=10),
+          panel.grid = element_blank(), legend.background = element_rect(linetype = 1, size = 0.5, colour = 1),
+          axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank())
+  ggsave(save_name_svy[i])
+}
+ggarrange(svy_grahps[[1]],svy_grahps[[4]], common.legend = TRUE, legend="bottom")
+ggsave("svy_graphs_2500_5000.png")
+ggarrange(svy_grahps[[2]],svy_grahps[[3]], common.legend = TRUE, legend="bottom")
+ggsave("svy_graphs_3000_4000.png")
+ggarrange(IA_graphs[[2]],IA_graphs[[3]], common.legend = TRUE, legend="bottom")
+ggsave("IA_graphs_3000_4000.png")
+ggarrange(IA_graphs[[1]],IA_graphs[[4]], common.legend = TRUE, legend="bottom")
+ggsave("IA_graphs_2500_5000.png")
+
+
+
+#standardized bias graph
+N_obs <- c("2500","3000","4000","5000")
+save_name_IA <- c("MaxMean_IA_2500.png","MaxMean_IA_3000.png","MaxMean_IA_4000.png","MaxMean_IA_5000.png")
+save_name_svy <- c("MaxMean_svy_2500.png","MaxMean_svy_3000.png","MaxMean_svy_4000.png","MaxMean_svy_5000.png")
+stdbias_graphs <- list()
+
+for(i in 1:4){
+  stdbias_res <- cbind(Q,cbind(glm_standardized_bias[(1+(i-1)*11):(i*11)],
+                               (intera_standardized_bias[(1+(i-1)*11):(i*11)]),
+                               (intera_target_standardized_bias[(1+(i-1)*11):(i*11)])))
+  colnames(stdbias_res) <- c("Q", "Survey", "Total interaction","Target interaction")
+  
+  temp_IA <- melt(stdbias_res[1:11,-1])
+  temp_IA$Q <- rep(Q,3)
+  colnames(temp_IA) <- c("Var1","Legend", "Bias","Q")
+  
+  # ggplot for standardized bias
+  stdbias_graphs[[i]] <- ggplot(temp_IA, aes(x=Q, y= Bias, colour = Legend))+
+    geom_point()+
+    geom_line() +
+    ggtitle(paste("Standardized bias with", N_obs[i] ,"observations ", sep = " ")) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme_light() +
+    ylim(0,120) +
+    theme(panel.grid.major.y = element_line( size=.1, color="grey" ) ,
+          axis.line = element_line(colour = "black"),plot.title = element_text(size=10, face = "bold"),
+          legend.position="right", legend.text = element_text(size=10),
+          panel.grid = element_blank(), legend.background = element_rect(linetype = 1, size = 0.5, colour = 1),
+          axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank())
+  
+  
+}
+ggarrange(stdbias_graphs[[1]], stdbias_graphs[[2]],stdbias_graphs[[3]],stdbias_graphs[[4]], common.legend = TRUE, legend="bottom")
+ggsave("stdbias_graph.png")
+
+#LRT result
+LRT_res_fin <- 100*round(cbind(LRT_res[1:11],LRT_res[12:22],LRT_res[23:33],LRT_res[34:44])/1000,3)
+rownames(LRT_res_fin) <-  c(8:18)*0.05
+colnames(LRT_res_fin) <- c("2500","3000", "4000","5000")
+print(xtable(LRT_res_fin, type = "latex"), file = "LRT_results.tex")
