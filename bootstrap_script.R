@@ -492,6 +492,7 @@ rownames(target_w_interaction_res) <- c
 svy_glm_dif <- matrix(0,nrow = length(c), ncol=28)
 rownames(svy_glm_dif) <- c
 LRT_res <- vector()
+prediction_result <- matrix(0, nrow = length(c), ncol = 4)
 
 est_int_total <- list()
 est_int_svy <- list()
@@ -511,8 +512,15 @@ for(i in c){
   est_int_svy[[j]] <- (estimates$svyglm.total_audience)
   est_int_target[[j]] <- (estimates$glm.interaction_target_audience)
   LRT_res[j] <- sum(estimates$LRT.interaction_model)
+  prediction_result[j,] <- colMeans(cbind(estimates$hitrate.svyglm,estimates$hitrate.interaction,estimates$bayesrate,estimates$alwayszero))
   j=j+1
 }
+
+#prediction 
+colnames(prediction_result) <- c("Weighted model", "Interaction model", "Bayesrate", "Always zero")
+rownames(prediction_result) <-  substr(c,nchar(c)-8,nchar(c))
+print(xtable(prediction_result, type = "latex"), file = "Prediction_table.tex")
+
 
 Q <- c(8:18)*0.05
 
@@ -828,3 +836,9 @@ LRT_res_fin <- 100*round(cbind(LRT_res[1:11],LRT_res[12:22],LRT_res[23:33],LRT_r
 rownames(LRT_res_fin) <-  c(8:18)*0.05
 colnames(LRT_res_fin) <- c("2500","3000", "4000","5000")
 print(xtable(LRT_res_fin, type = "latex"), file = "LRT_results.tex")
+
+#Wald result
+
+#Hitrates
+
+
