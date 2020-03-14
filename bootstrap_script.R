@@ -1,6 +1,5 @@
 # Fix seed and load libraries
 set.seed(123456)
-install.packages("ggpubr")
 library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase); library(xtable);
 library(Rfast); library(reshape2); library(ggpubr)
 
@@ -24,8 +23,6 @@ CPS <- rbind.data.frame(c(0.203195,0.10298,0.100214),
                         c(0.424408,0.195766,0.228643))
 colnames(CPS) = c("Total", "Male", "Female")
 rownames(CPS) = c("25-34", "35-44", "45-54", "55-99")
-target_gender = "Male"
-target_age = "25-34"
 kpi = "Consideration"
 
 
@@ -36,17 +33,17 @@ kpi = "Consideration"
 #######################################################################
 
 # Separate target age group for future reference
-target_min_age = as.numeric(substring(target_age, 1, 2))
-target_max_age = as.numeric(substring(target_age, nchar(target_age)-1, nchar(target_age)))
+# target_min_age = as.numeric(substring(target_age, 1, 2))
+# target_max_age = as.numeric(substring(target_age, nchar(target_age)-1, nchar(target_age)))
 
 # Load Pointlogic source data
 source_data = read.csv("./cleaned_unified_sample.csv")
 
 # Separate true data into predictors and responses, and split target and non-target data
 #true_fullsample_variables = separate_predictors_responses(source_data)
-subsamples = split_sample(source_data, tolower(target_gender), target_min_age, target_max_age)
-true_target_variables = separate_predictors_responses(subsamples$target)
-true_nontarget_variables = separate_predictors_responses(subsamples$nontarget)
+# subsamples = split_sample(source_data, tolower(target_gender), target_min_age, target_max_age)
+# true_target_variables = separate_predictors_responses(subsamples$target)
+# true_nontarget_variables = separate_predictors_responses(subsamples$nontarget)
 
 
 
@@ -85,18 +82,6 @@ target_params_insig_w_Dem = append(target_params_insig, demographics_params)
 
 nontarget_params_wo_Dem = c(-1.5, -3, 3.2, -1.0, 0.5, 1.0, 0.6)
 nontarget_params_w_Dem = append(nontarget_params_wo_Dem, demographics_params)
-
-# Compute population-level parameters as linear combination of target and non-target params
-true_population_params_sig = (CPS[target_age, target_gender]*target_params_w_Dem
-                               + (1-CPS[target_age, target_gender])*nontarget_params_w_Dem)
-true_population_params_insig = (CPS[target_age, target_gender]*target_params_insig_w_Dem
-                               + (1-CPS[target_age, target_gender])*nontarget_params_w_Dem)
-
-
-mean(generate_response(data_w_Dem, target_params_w_Dem, nrow(data_w_Dem)))
-mean(generate_response(data_w_Dem, nontarget_params_w_Dem, nrow(data_w_Dem)))
-
-mean(generate_response(data_w_Dem, target_params_insig_w_Dem, nrow(data_w_Dem)))
 
 #######################################################################
 #######################################################################
@@ -269,14 +254,8 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
                                       beta_target, beta_nontarget, beta_population,
                                       sample_size_total, sample_size_target,
                                       n_bootstraps,
-                                      target_group_age = target_age,
-                                      target_group_gender = target_gender) {
-  
-  
-  # ###### DELETE THE BELOW
-  # X_w_demographics = data_w_Dem; n_interaction_variables = length(target_params_wo_Dem)
-  # beta_target = target_params_w_Dem; beta_nontarget = nontarget_params_w_Dem; beta_population = true_population_params_sig
-  # sample_size_total = 5000; sample_size_target = 2500
+                                      target_group_age,
+                                      target_group_gender) {
   
   start_time = Sys.time()
   
@@ -446,39 +425,80 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
   return(out)
 }
 
-
+# 10% in population
 if (TRUE) {
   
-  ##### Significant parameters
-  for (N in c(5000)) {
+  # Compute population-level parameters as linear combination of target and non-target params
+  target_age = "25-34"
+  target_gender = "Male"
+  true_population_params_sig = (CPS[target_age, target_gender]*target_params_w_Dem
+                                + (1-CPS[target_age, target_gender])*nontarget_params_w_Dem)
+  
+  for (N in c(2000, 3000, 5000)) {
     print(paste("N:", N))
-    for (Q in 10) {
+    for (Q in 5*(8:18)) {
       print(paste("Q:", Q))
-      assign(paste("significant_N", N, "_Q", Q, sep=""),
+      assign(paste("N", N, "_Q", Q, "_P10", sep=""),
              fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
                                        target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
                                        sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_bootstraps = 500))
+                                       n_bootstraps = 2,
+                                       target_group_age = target_age,
+                                       target_group_gender = target_gender))
     }
   }
   #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
-  
-  ##### Insignificant parameters
-  # for (N in c(5000)) {
-  #   print(paste("N:", N))
-  #   for (Q in 5*(8:18)) {
-  #     print(paste("Q:", Q))
-  #     assign(paste("insignificant_N", N, "_Q", Q, sep=""),
-  #            fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
-  #                                      target_params_insig_w_Dem, nontarget_params_w_Dem, true_population_params_insig,
-  #                                      sample_size_total = N, sample_size_target = (N*Q/100),
-  #                                      n_bootstraps = 1000))
-  #   }
-  # }
-  # save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_insignificant.RData")
 }
 
+# 20% in population
+if (TRUE) {
+  
+  # Compute population-level parameters as linear combination of target and non-target params
+  target_age = "25-34"
+  target_gender = "Total"
+  true_population_params_sig = (CPS[target_age, target_gender]*target_params_w_Dem
+                                + (1-CPS[target_age, target_gender])*nontarget_params_w_Dem)
+  
+  for (N in c(2000, 3000, 5000)) {
+    print(paste("N:", N))
+    for (Q in 5*(8:18)) {
+      print(paste("Q:", Q))
+      assign(paste("N", N, "_Q", Q, "_P20", sep=""),
+             fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
+                                       target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
+                                       sample_size_total = N, sample_size_target = (N*Q/100),
+                                       n_bootstraps = 2,
+                                       target_group_age = target_age,
+                                       target_group_gender = target_gender))
+    }
+  }
+  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
+}
 
+# 40% in population
+if (TRUE) {
+  
+  # Compute population-level parameters as linear combination of target and non-target params
+  target_age = "55-99"
+  target_gender = "Total"
+  true_population_params_sig = (CPS[target_age, target_gender]*target_params_w_Dem
+                                + (1-CPS[target_age, target_gender])*nontarget_params_w_Dem)
+  
+  for (N in c(2000, 3000, 5000)) {
+    print(paste("N:", N))
+    for (Q in 5*(8:18)) {
+      print(paste("Q:", Q))
+      assign(paste("N", N, "_Q", Q, "_P40", sep=""),
+             fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
+                                       target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
+                                       sample_size_total = N, sample_size_target = (N*Q/100),
+                                       n_bootstraps = 2,
+                                       target_group_age = target_age,
+                                       target_group_gender = target_gender))
+    }
+  }
+  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
+}
 
 
 
