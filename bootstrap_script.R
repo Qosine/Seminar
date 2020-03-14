@@ -442,7 +442,7 @@ if (TRUE) {
              fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
                                        target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
                                        sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_bootstraps = 2,
+                                       n_bootstraps = 2000,
                                        target_group_age = target_age,
                                        target_group_gender = target_gender))
     }
@@ -467,7 +467,7 @@ if (TRUE) {
              fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
                                        target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
                                        sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_bootstraps = 2,
+                                       n_bootstraps = 2000,
                                        target_group_age = target_age,
                                        target_group_gender = target_gender))
     }
@@ -492,7 +492,7 @@ if (TRUE) {
              fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
                                        target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
                                        sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_bootstraps = 2,
+                                       n_bootstraps = 2000,
                                        target_group_age = target_age,
                                        target_group_gender = target_gender))
     }
