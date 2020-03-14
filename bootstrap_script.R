@@ -1,11 +1,13 @@
 # Fix seed and load libraries
 set.seed(123456)
-library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase); library(xtable); library(Rfast); library(reshape2); library(ggpubr)
+install.packages("ggpubr")
+library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase); library(xtable);
+library(Rfast); library(reshape2); library(ggpubr)
 
 # Pathing - fix this on your machine first (set to local Git directory)
-path = "C:/Users/marcs/OneDrive/Bureaublad/Master/Seminar/Seminar/GitHub/Seminar"
+#path = "C:/Users/marcs/OneDrive/Bureaublad/Master/Seminar/Seminar/GitHub/Seminar"
 # path = "~/Documents/Econometrie/Masters/Seminar Nielsen"
-#path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
+path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 setwd(path)
 source("./200302_simulation_support_functions.R")
 
@@ -270,6 +272,12 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
                                       target_group_age = target_age,
                                       target_group_gender = target_gender) {
   
+  
+  # ###### DELETE THE BELOW
+  # X_w_demographics = data_w_Dem; n_interaction_variables = length(target_params_wo_Dem)
+  # beta_target = target_params_w_Dem; beta_nontarget = nontarget_params_w_Dem; beta_population = true_population_params_sig
+  # sample_size_total = 5000; sample_size_target = 2500
+  
   start_time = Sys.time()
   
   N = nrow(X_w_demographics)
@@ -279,6 +287,7 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
   glm_interaction = matrix(0, n_bootstraps, ( length(beta_target)+n_interaction_variables ))
   LRT_interaction = rep(0, n_bootstraps)
   Wald_svyglm = rep(0, n_bootstraps)
+  ttest_svyglm = rep(0, n_bootstraps)
   hitrate_svyglm = rep(0, n_bootstraps)
   hitrate_interaction = rep(0, n_bootstraps)
   bayesrate = rep(0, n_bootstraps)
@@ -354,7 +363,16 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
     svyglm.total_audience.Wald = regTermTest(svyglm.total_audience,
                                              test.terms = ~ constant + audiosum + digitalsum + programsum + tvsum + vodsum + yousum + male + havechildren + age3544 + age55plus + employed + income3050 + income5075 + income75100 + income100150 + income150200 + income2001000 + educ3 + etn_cauc + etn_afric + etn_hisp + etn_asian + etn_native + etn_other + married + single + separated,
                                              null = beta_population,
+                                             df = Inf,
                                              method = "Wald")
+    meaningless_variable = rnorm(sample_size_total)
+    ttest_inputs = create_svyglm_inputs(cbind(full_sample$predictors, meaningless_variable), full_sample$kpi)
+    ttest_design = svydesign(id=~1,
+                             data = ttest_inputs$data,
+                             weight = weights)
+    svyglm.total_audience.ttest = summary(svyglm(formula = ttest_inputs$func,
+                                                 design =  ttest_design,
+                                                 family = "quasibinomial"))$coefficients[ncol(full_sample$predictors)+1,"Pr(>|t|)"]
     
     # Fit interaction model
     glm.interaction_model.H1 <-  glm(full_sample$kpi ~ 0 + interaction_predictors,
@@ -364,7 +382,6 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
                                   family = binomial(link = "logit"))
     glm.interaction_model.LRT = 2*abs(logLik(glm.interaction_model.H1) - logLik(glm.interaction_model.H0))
     glm.interaction_model.df = length(beta_interaction)
-    
     glm.interaction_model.nontarget = glm.interaction_model.H1$coefficients[1:length(beta_nontarget)]
     glm.interaction_model.target = glm.interaction_model.nontarget
     glm.interaction_model.target[1:n_interaction_variables] = (glm.interaction_model.target[1:n_interaction_variables] +
@@ -391,6 +408,7 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
     glm_interaction[i,] = glm.interaction_model.H1$coefficients
     LRT_interaction[i] = ( glm.interaction_model.LRT > qchisq(0.95, glm.interaction_model.df) )
     Wald_svyglm[i] = ( svyglm.total_audience.Wald$p <= 0.05 )
+    ttest_svyglm[i] = ( svyglm.total_audience.ttest <= 0.05 )
     hitrate_svyglm[i] = mean(svyglm.total_audience.predict==test_data$kpi)
     bayesrate[i] = mean(bayes_classifier==test_data$kpi)
     alwayszero[i] = mean(0==test_data$kpi)
@@ -420,6 +438,7 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
   out$glm.interaction_total_audience = glm_interaction_total
   out$LRT.interaction_model = LRT_interaction
   out$Wald.svyglm = Wald_svyglm
+  out$ttest.svyglm = ttest_svyglm
   out$hitrate.svyglm = hitrate_svyglm
   out$bayesrate = bayesrate
   out$alwayszero = alwayszero
@@ -431,32 +450,32 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
 if (TRUE) {
   
   ##### Significant parameters
-  # for (N in c(2500,3000,4000,5000)) {
+  for (N in c(5000)) {
+    print(paste("N:", N))
+    for (Q in 10) {
+      print(paste("Q:", Q))
+      assign(paste("significant_N", N, "_Q", Q, sep=""),
+             fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
+                                       target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
+                                       sample_size_total = N, sample_size_target = (N*Q/100),
+                                       n_bootstraps = 500))
+    }
+  }
+  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
+  
+  ##### Insignificant parameters
+  # for (N in c(5000)) {
   #   print(paste("N:", N))
   #   for (Q in 5*(8:18)) {
   #     print(paste("Q:", Q))
-  #     assign(paste("significant_N", N, "_Q", Q, sep=""),
+  #     assign(paste("insignificant_N", N, "_Q", Q, sep=""),
   #            fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
-  #                                      target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
+  #                                      target_params_insig_w_Dem, nontarget_params_w_Dem, true_population_params_insig,
   #                                      sample_size_total = N, sample_size_target = (N*Q/100),
   #                                      n_bootstraps = 1000))
   #   }
   # }
-  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
-  
-  ##### Insignificant parameters
-  for (N in c(5000)) {
-    print(paste("N:", N))
-    for (Q in 5*(8:18)) {
-      print(paste("Q:", Q))
-      assign(paste("insignificant_N", N, "_Q", Q, sep=""),
-             fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
-                                       target_params_insig_w_Dem, nontarget_params_w_Dem, true_population_params_insig,
-                                       sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_bootstraps = 1000))
-    }
-  }
-  save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_insignificant.RData")
+  # save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_insignificant.RData")
 }
 
 
@@ -518,9 +537,9 @@ for(i in c){
 }
 
 #prediction 
-colnames(prediction_result) <- c("Weighted model", "Interaction model", "Bayesrate", "Always zero")
+colnames(prediction_result) <- c("Weighted model", "Interaction model", "Bayes Classifier", "Always zero")
 rownames(prediction_result) <-  substr(c,nchar(c)-8,nchar(c))
-print(xtable(prediction_result, type = "latex"), file = "Prediction_table.tex")
+print(xtable(round(prediction_result*100,2), type = "latex"), file = "Prediction_table.tex")
 
 
 Q <- c(8:18)*0.05
@@ -737,13 +756,13 @@ for(i in 1:4){
                           rowMaxs(100*round(total_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE),
                           rowMeans(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
                           rowMaxs(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE)))
-  colnames(IA_res) <- c("Q", "Total_mean", "Total_max","Target_mean", "Target_max")
+  colnames(IA_res) <- c("Q", "IA Total Mean", "IA Total Max","IA Target Mean", "IA Target Max")
   
   svy_res <- cbind(Q,cbind(rowMeans(100*round(svyglm_res[(1+(i-1)*11):(i*11),1:14],2)),
                            rowMaxs(100*round(svyglm_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE),
                            rowMeans(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],2)),
                            rowMaxs(100*round(target_w_interaction_res[(1+(i-1)*11):(i*11),1:14],3), value=TRUE)))
-  colnames(svy_res) <- c("Q", "Svyglm_Mean", "Svyglm_Max","Target_Mean", "Target_Max")
+  colnames(svy_res) <- c("Q", "SVY Total Mean", "SVY Total Max","SVY Target Mean", "SVY Target Max")
   
   temp_IA <- melt(IA_res[1:11,-1])
   temp_IA$Q <- rep(Q,4)
@@ -760,7 +779,7 @@ for(i in 1:4){
   IA_graphs[[i]] <- ggplot(temp_IA, aes(x=Q, y= Bias, colour = Legend))+
     geom_point()+
     geom_line() +
-    ggtitle(paste("Max and mean bias for interaction model with", N_obs[i] ,"observations ", sep = " ")) +
+    ggtitle(paste("Mean, Max PB for IA Model, N =", N_obs[i], sep = " ")) +
     theme(plot.title = element_text(hjust = 0.5)) +
     theme_light() +
     ylim(0,30) +
@@ -775,7 +794,7 @@ for(i in 1:4){
   svy_grahps[[i]] <- ggplot(temp_svy, aes(x=Q, y= Bias, colour = Legend))+
     geom_point()+
     geom_line() +
-    ggtitle(paste("Max and mean bias for weighted model with", N_obs[i] ,"observations ", sep = " ")) +
+    ggtitle(paste("Mean, Max PB for SVY Model, N =", N_obs[i], sep = " ")) +
     theme(plot.title = element_text(hjust = 0.5)) +
     theme_light() +
     ylim(0,30) +
@@ -807,7 +826,7 @@ for(i in 1:4){
   stdbias_res <- cbind(Q,cbind(glm_standardized_bias[(1+(i-1)*11):(i*11)],
                                (intera_standardized_bias[(1+(i-1)*11):(i*11)]),
                                (intera_target_standardized_bias[(1+(i-1)*11):(i*11)])))
-  colnames(stdbias_res) <- c("Q", "Survey", "Total interaction","Target interaction")
+  colnames(stdbias_res) <- c("Q", "SVY", "IA Total","IA Target")
   
   temp_IA <- melt(stdbias_res[1:11,-1])
   temp_IA$Q <- rep(Q,3)
@@ -817,7 +836,7 @@ for(i in 1:4){
   stdbias_graphs[[i]] <- ggplot(temp_IA, aes(x=Q, y= Bias, colour = Legend))+
     geom_point()+
     geom_line() +
-    ggtitle(paste("Standardized bias with", N_obs[i] ,"observations ", sep = " ")) +
+    ggtitle(paste("SB for N =", N_obs[i] , sep = " ")) +
     theme(plot.title = element_text(hjust = 0.5)) +
     theme_light() +
     ylim(0,120) +
