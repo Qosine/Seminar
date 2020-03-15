@@ -493,7 +493,7 @@ if (TRUE) {
   
   for (N in c(2000, 3000, 5000)) {
     print(paste("N:", N))
-    for (Q in 40) {
+    for (Q in 5*(8:18)) {
       print(paste("Q:", Q))
       assign(paste("N", N, "_Q", Q, "_P10", sep=""),
              fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
