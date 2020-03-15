@@ -262,6 +262,7 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
   N = nrow(X_w_demographics)
   beta_interaction = append(beta_nontarget, (beta_target - beta_nontarget)[1:n_interaction_variables] )
   
+  glm_target = matrix(0, n_bootstraps, length(beta_target))
   svyglm_total = matrix(0, n_bootstraps, length(beta_target))
   glm_interaction = matrix(0, n_bootstraps, ( length(beta_target)+n_interaction_variables ))
   LRT_interaction = rep(0, n_bootstraps)
@@ -305,10 +306,10 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
     interaction_predictors = cbind(full_sample$predictors, interaction)
     
     # Create test set
-    test_data$predictors = X_w_demographics[idx_test,]
-    test_data$kpi = generate_response(test_data$predictors,
-                                      beta_population,
-                                      nrow(test_data$predictors))
+    # test_data$predictors = X_w_demographics[idx_test,]
+    # test_data$kpi = generate_response(test_data$predictors,
+    #                                   beta_population,
+    #                                   nrow(test_data$predictors))
     # Q = sample_size_target/sample_size_total
     # sample_size_target_test = floor(Q*nrow(test_data$predictors))
     # test_data$interaction = rbind(test_data$predictors[1:sample_size_target_test, 1:n_interaction_variables],
@@ -331,36 +332,40 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
                "Breaking program, please try a less extreme parameter setting", sep=""))
     }
     
+    # Targer GLM
+    glm.target.H1 <- glm(target_data$kpi ~ 0 + target_data$predictors,
+                         family = binomial(link="logit"))
+    
     # Fit Horvitz-Thompson
-    svy_inputs = create_svyglm_inputs(full_sample$predictors, full_sample$kpi)
-    design_func <- svydesign(id = ~1,
-                             data = svy_inputs$data,
-                             weight = weights)
-    svyglm.total_audience <- svyglm(formula = svy_inputs$func,
-                                    design =  design_func,
-                                    family = "quasibinomial")
-    svyglm.total_audience.Wald = regTermTest(svyglm.total_audience,
-                                             test.terms = ~ constant + audiosum + digitalsum + programsum + tvsum + vodsum + yousum + male + havechildren + age3544 + age55plus + employed + income3050 + income5075 + income75100 + income100150 + income150200 + income2001000 + educ3 + etn_cauc + etn_afric + etn_hisp + etn_asian + etn_native + etn_other + married + single + separated,
-                                             null = beta_population,
-                                             df = Inf,
-                                             method = "Wald")
-    meaningless_variable = rnorm(sample_size_total)
-    ttest_inputs = create_svyglm_inputs(cbind(full_sample$predictors, meaningless_variable), full_sample$kpi)
-    ttest_design = svydesign(id=~1,
-                             data = ttest_inputs$data,
-                             weight = weights)
-    svyglm.total_audience.ttest = summary(svyglm(formula = ttest_inputs$func,
-                                                 design =  ttest_design,
-                                                 family = "quasibinomial"))$coefficients[ncol(full_sample$predictors)+1,"Pr(>|t|)"]
+    # svy_inputs = create_svyglm_inputs(full_sample$predictors, full_sample$kpi)
+    # design_func <- svydesign(id = ~1,
+    #                          data = svy_inputs$data,
+    #                          weight = weights)
+    # svyglm.total_audience <- svyglm(formula = svy_inputs$func,
+    #                                 design =  design_func,
+    #                                 family = "quasibinomial")
+    # svyglm.total_audience.Wald = regTermTest(svyglm.total_audience,
+    #                                          test.terms = ~ constant + audiosum + digitalsum + programsum + tvsum + vodsum + yousum + male + havechildren + age3544 + age55plus + employed + income3050 + income5075 + income75100 + income100150 + income150200 + income2001000 + educ3 + etn_cauc + etn_afric + etn_hisp + etn_asian + etn_native + etn_other + married + single + separated,
+    #                                          null = beta_population,
+    #                                          df = Inf,
+    #                                          method = "Wald")
+    # meaningless_variable = rnorm(sample_size_total)
+    # ttest_inputs = create_svyglm_inputs(cbind(full_sample$predictors, meaningless_variable), full_sample$kpi)
+    # ttest_design = svydesign(id=~1,
+    #                          data = ttest_inputs$data,
+    #                          weight = weights)
+    # svyglm.total_audience.ttest = summary(svyglm(formula = ttest_inputs$func,
+    #                                              design =  ttest_design,
+    #                                              family = "quasibinomial"))$coefficients[ncol(full_sample$predictors)+1,"Pr(>|t|)"]
     
     # Fit interaction model
     glm.interaction_model.H1 <-  glm(full_sample$kpi ~ 0 + interaction_predictors,
                                   family = binomial(link="logit"))
-    glm.interaction_model.H0 <- glm(full_sample$kpi ~
-                                    0 + offset(interaction_predictors%*%beta_interaction),
-                                  family = binomial(link = "logit"))
-    glm.interaction_model.LRT = 2*abs(logLik(glm.interaction_model.H1) - logLik(glm.interaction_model.H0))
-    glm.interaction_model.df = length(beta_interaction)
+    # glm.interaction_model.H0 <- glm(full_sample$kpi ~
+    #                                 0 + offset(interaction_predictors%*%beta_interaction),
+    #                               family = binomial(link = "logit"))
+    # glm.interaction_model.LRT = 2*abs(logLik(glm.interaction_model.H1) - logLik(glm.interaction_model.H0))
+    # glm.interaction_model.df = length(beta_interaction)
     glm.interaction_model.nontarget = glm.interaction_model.H1$coefficients[1:length(beta_nontarget)]
     glm.interaction_model.target = glm.interaction_model.nontarget
     glm.interaction_model.target[1:n_interaction_variables] = (glm.interaction_model.target[1:n_interaction_variables] +
@@ -372,26 +377,27 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
     
     
     # Prediction
-    svyglm.total_audience.predict = predict_response(test_data$predictors,
-                                                     svyglm.total_audience$coefficients,
-                                                     0.5)
-    glm.interaction_model.predict = predict_response(test_data$predictors,
-                                                     glm_interaction_model.total,
-                                                     0.5)
-    bayes_classifier = predict_response(test_data$predictors,
-                                        beta_population,
-                                        0.5)
+    # svyglm.total_audience.predict = predict_response(test_data$predictors,
+    #                                                  svyglm.total_audience$coefficients,
+    #                                                  0.5)
+    # glm.interaction_model.predict = predict_response(test_data$predictors,
+    #                                                  glm_interaction_model.total,
+    #                                                  0.5)
+    # bayes_classifier = predict_response(test_data$predictors,
+    #                                     beta_population,
+    #                                     0.5)
     
     # Store results
-    svyglm_total[i,] = svyglm.total_audience$coefficients
+    glm_target[i,] = glm.target.H1$coefficients
+    # svyglm_total[i,] = svyglm.total_audience$coefficients
     glm_interaction[i,] = glm.interaction_model.H1$coefficients
-    LRT_interaction[i] = ( glm.interaction_model.LRT > qchisq(0.95, glm.interaction_model.df) )
-    Wald_svyglm[i] = ( svyglm.total_audience.Wald$p <= 0.05 )
-    ttest_svyglm[i] = ( svyglm.total_audience.ttest <= 0.05 )
-    hitrate_svyglm[i] = mean(svyglm.total_audience.predict==test_data$kpi)
-    bayesrate[i] = mean(bayes_classifier==test_data$kpi)
-    alwayszero[i] = mean(0==test_data$kpi)
-    hitrate_interaction[i] = mean(glm.interaction_model.predict==test_data$kpi)
+    # LRT_interaction[i] = ( glm.interaction_model.LRT > qchisq(0.95, glm.interaction_model.df) )
+    # Wald_svyglm[i] = ( svyglm.total_audience.Wald$p <= 0.05 )
+    # ttest_svyglm[i] = ( svyglm.total_audience.ttest <= 0.05)
+    # hitrate_svyglm[i] = mean(svyglm.total_audience.predict==test_data$kpi)
+    # bayesrate[i] = mean(bayes_classifier==test_data$kpi)
+    # alwayszero[i] = mean(0==test_data$kpi)
+    # hitrate_interaction[i] = mean(glm.interaction_model.predict==test_data$kpi)
     
     # Track progress
     if (i%%250 == 0) {
@@ -412,28 +418,29 @@ fit_total_audience_models <- function(X_w_demographics, n_interaction_variables,
   
   
   out = list()
-  out$svyglm.total_audience = svyglm_total
+  out$glm.target_audience = glm_target
+  # out$svyglm.total_audience = svyglm_total
   out$glm.interaction_target_audience = glm_interaction_target
   out$glm.interaction_total_audience = glm_interaction_total
-  out$LRT.interaction_model = LRT_interaction
-  out$Wald.svyglm = Wald_svyglm
-  out$ttest.svyglm = ttest_svyglm
-  out$hitrate.svyglm = hitrate_svyglm
-  out$bayesrate = bayesrate
-  out$alwayszero = alwayszero
-  out$hitrate.interaction = hitrate_interaction
+  # out$LRT.interaction_model = LRT_interaction
+  # out$Wald.svyglm = Wald_svyglm
+  # out$ttest.svyglm = ttest_svyglm
+  # out$hitrate.svyglm = hitrate_svyglm
+  # out$bayesrate = bayesrate
+  # out$alwayszero = alwayszero
+  # out$hitrate.interaction = hitrate_interaction
   return(out)
 }
 
 # 10% in population
 if (TRUE) {
-  
+
   # Compute population-level parameters as linear combination of target and non-target params
   target_age = "25-34"
   target_gender = "Male"
   true_population_params_sig = (CPS[target_age, target_gender]*target_params_w_Dem
                                 + (1-CPS[target_age, target_gender])*nontarget_params_w_Dem)
-  
+
   for (N in c(2000, 3000, 5000)) {
     print(paste("N:", N))
     for (Q in 5*(8:18)) {
@@ -452,13 +459,13 @@ if (TRUE) {
 
 # 20% in population
 if (TRUE) {
-  
+
   # Compute population-level parameters as linear combination of target and non-target params
   target_age = "25-34"
   target_gender = "Total"
   true_population_params_sig = (CPS[target_age, target_gender]*target_params_w_Dem
                                 + (1-CPS[target_age, target_gender])*nontarget_params_w_Dem)
-  
+
   for (N in c(2000, 3000, 5000)) {
     print(paste("N:", N))
     for (Q in 5*(8:18)) {
@@ -472,7 +479,7 @@ if (TRUE) {
                                        target_group_gender = target_gender))
     }
   }
-  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
+  save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200314_N2000_5000P40.RData")
 }
 
 # 40% in population
@@ -486,9 +493,9 @@ if (TRUE) {
   
   for (N in c(2000, 3000, 5000)) {
     print(paste("N:", N))
-    for (Q in 5*(8:18)) {
+    for (Q in 40) {
       print(paste("Q:", Q))
-      assign(paste("N", N, "_Q", Q, "_P40", sep=""),
+      assign(paste("N", N, "_Q", Q, "_P10", sep=""),
              fit_total_audience_models(data_w_Dem, length(target_params_wo_Dem),
                                        target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
                                        sample_size_total = N, sample_size_target = (N*Q/100),
@@ -497,12 +504,8 @@ if (TRUE) {
                                        target_group_gender = target_gender))
     }
   }
-  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200312_overnight_simulation_significant.RData")
+  #save.image("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar/200315_N1500_test")
 }
-
-
-
-
 
 
 
