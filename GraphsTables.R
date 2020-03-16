@@ -137,7 +137,7 @@ setwd("C:/Users/marti/Documents/GitHub/Seminar/P40")
 load("200314_N2000_5000_P40.RData")
 
 #tables:
-# for P10
+#for P10
 # c <- c("N2000_Q40_P10","N2000_Q45_P10","N2000_Q50_P10","N2000_Q55_P10","N2000_Q60_P10","N2000_Q65_P10","N2000_Q70_P10","N2000_Q75_P10","N2000_Q80_P10","N2000_Q85_P10","N2000_Q90_P10",
 #        "N3000_Q40_P10","N3000_Q45_P10","N3000_Q50_P10","N3000_Q55_P10","N3000_Q60_P10","N3000_Q65_P10","N3000_Q70_P10","N3000_Q75_P10","N3000_Q80_P10","N3000_Q85_P10","N3000_Q90_P10",
 #        "N5000_Q40_P10","N5000_Q45_P10","N5000_Q50_P10","N5000_Q55_P10","N5000_Q60_P10","N5000_Q65_P10","N5000_Q70_P10","N5000_Q75_P10","N5000_Q80_P10","N5000_Q85_P10","N5000_Q90_P10")
@@ -154,8 +154,8 @@ c <- c("N2000_Q40_P40","N2000_Q45_P40","N2000_Q50_P40","N2000_Q55_P40","N2000_Q6
 true_population_params <- true_population_params_sig
 
 #for p10
-# true_population_params <- (CPS[ "25-34","Male"]*target_params_w_Dem
-#                           + (1-CPS["25-34","Male"])*nontarget_params_w_Dem)
+#true_population_params <- (CPS[ "25-34","Male"]*target_params_w_Dem
+                         # + (1-CPS["25-34","Male"])*nontarget_params_w_Dem)
 
 
 cols <- c("/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB",
@@ -169,6 +169,8 @@ rownames(target_w_interaction_res) <- c
 svy_glm_dif <- matrix(0,nrow = length(c), ncol=28)
 rownames(svy_glm_dif) <- c
 LRT_res <- vector()
+Wald_res <- vector()
+T_test <- vector()
 prediction_result <- matrix(0, nrow = length(c), ncol = 4)
 
 est_int_total <- list()
@@ -189,6 +191,8 @@ for(i in c){
   est_int_svy[[j]] <- (estimates$svyglm.total_audience)
   est_int_target[[j]] <- (estimates$glm.interaction_target_audience)
   LRT_res[j] <- sum(estimates$LRT.interaction_model)
+  Wald_res[j] <- sum(estimates$Wald.svyglm)
+  T_test[j] <- sum(estimates$ttest.svyglm)
   prediction_result[j,] <- round(100*(colMeans(cbind(estimates$hitrate.svyglm,estimates$hitrate.interaction,estimates$bayesrate,estimates$alwayszero))),2)
   j=j+1
 }
@@ -251,71 +255,74 @@ SB_result_mat[,9] <- intera_standardized_bias[23:33]
 
 
 # N = 2000
-N2000_result_mat <- matrix(0, nrow=11, ncol=12)
-rownames(N2000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-colnames(N2000_result_mat) = cols
+N2000_result_mat_SVYGLM <- matrix(0, nrow=11, ncol=6)
+N2000_result_mat_IA <- matrix(0, nrow=11, ncol=6)
+rownames(N2000_result_mat_SVYGLM) = rownames(N2000_result_mat_IA) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N2000_result_mat_SVYGLM) = colnames(N2000_result_mat_IA) = cols[1:6]
 # SVYGLM results
-N2000_result_mat[,1] <- round(rowMeans(100*svyglm_res[1:11,1:7]),2)
-N2000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[1:11], 2)
-N2000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[1:11,1:7], value = TRUE),2)
-N2000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[1:11,1:7], value = FALSE)]
-N2000_result_mat[,5] <- round(rowMeans(100*svyglm_res[1:11,15:28]),2)
-N2000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[1:11],2)
+N2000_result_mat_SVYGLM[,1] <- round(rowMeans(100*svyglm_res[1:11,1:7]),2)
+N2000_result_mat_SVYGLM[,2] <- round(glm_standardized_bias_ind_mean[1:11], 2)
+N2000_result_mat_SVYGLM[,3] <- round(rowMaxs(100*svyglm_res[1:11,1:7], value = TRUE),2)
+N2000_result_mat_SVYGLM[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[1:11,1:7], value = FALSE)]
+N2000_result_mat_SVYGLM[,5] <- round(rowMeans(100*svyglm_res[1:11,15:28]),2)
+N2000_result_mat_SVYGLM[,6] <- round(glm_standardized_bias_ind_mean_D[1:11],2)
 # Interaction total results
-N2000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[1:11,1:7]),2)
-N2000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[1:11], 2)
-N2000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[1:11,1:7], value = TRUE),2)
-N2000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[1:11,1:7], value = FALSE)]
-N2000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[1:11,15:28]),2)
-N2000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[1:11],2)
+N2000_result_mat_IA[,1] <- round(rowMeans(100*total_w_interaction_res[1:11,1:7]),2)
+N2000_result_mat_IA[,2] <- round(intera_standardized_bias_ind_mean[1:11], 2)
+N2000_result_mat_IA[,3] <- round(rowMaxs(100*total_w_interaction_res[1:11,1:7], value = TRUE),2)
+N2000_result_mat_IA[,4] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[1:11,1:7], value = FALSE)]
+N2000_result_mat_IA[,5] <- round(rowMeans(100*total_w_interaction_res[1:11,15:28]),2)
+N2000_result_mat_IA[,6] <- round(intera_standardized_bias_ind_mean_D[1:11],2)
 
 
 
 # N = 3000
-N3000_result_mat <- matrix(0, nrow=11, ncol=12)
-rownames(N3000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-colnames(N3000_result_mat) = cols
+N3000_result_mat_SVYGLM <- matrix(0, nrow=11, ncol=6)
+N3000_result_mat_IA <- matrix(0, nrow=11, ncol=6)
+rownames(N3000_result_mat_SVYGLM) = rownames(N3000_result_mat_IA) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N3000_result_mat_SVYGLM) = colnames(N3000_result_mat_IA) = cols[1:6]
 # SVYGLM results
-N3000_result_mat[,1] <- round(rowMeans(100*svyglm_res[12:22,1:7]),2)
-N3000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[12:22], 2)
-N3000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[12:22,1:7], value = TRUE),2)
-N3000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[12:22,1:7], value = FALSE)]
-N3000_result_mat[,5] <- round(rowMeans(100*svyglm_res[12:22,15:28]),2)
-N3000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[12:22],2)
+N3000_result_mat_SVYGLM[,1] <- round(rowMeans(100*svyglm_res[12:22,1:7]),2)
+N3000_result_mat_SVYGLM[,2] <- round(glm_standardized_bias_ind_mean[12:22], 2)
+N3000_result_mat_SVYGLM[,3] <- round(rowMaxs(100*svyglm_res[12:22,1:7], value = TRUE),2)
+N3000_result_mat_SVYGLM[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[12:22,1:7], value = FALSE)]
+N3000_result_mat_SVYGLM[,5] <- round(rowMeans(100*svyglm_res[12:22,15:28]),2)
+N3000_result_mat_SVYGLM[,6] <- round(glm_standardized_bias_ind_mean_D[12:22],2)
 # Interaction total results
-N3000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[12:22,1:7]),2)
-N3000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[12:22], 2)
-N3000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[12:22,1:7], value = TRUE),2)
-N3000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[12:22,1:7], value = FALSE)]
-N3000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[12:22,15:28]),2)
-N3000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[12:22],2)
+N3000_result_mat_IA[,1] <- round(rowMeans(100*total_w_interaction_res[12:22,1:7]),2)
+N3000_result_mat_IA[,2] <- round(intera_standardized_bias_ind_mean[12:22], 2)
+N3000_result_mat_IA[,3] <- round(rowMaxs(100*total_w_interaction_res[12:22,1:7], value = TRUE),2)
+N3000_result_mat_IA[,4] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[12:22,1:7], value = FALSE)]
+N3000_result_mat_IA[,5] <- round(rowMeans(100*total_w_interaction_res[12:22,15:28]),2)
+N3000_result_mat_IA[,6] <- round(intera_standardized_bias_ind_mean_D[12:22],2)
 
 
 
 # N = 5000
-N5000_result_mat <- matrix(0, nrow=11, ncol=12)
-rownames(N5000_result_mat) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
-colnames(N5000_result_mat) = cols
+N5000_result_mat_SVYGLM <- matrix(0, nrow=11, ncol=6)
+N5000_result_mat_IA <- matrix(0, nrow=11, ncol=6)
+rownames(N5000_result_mat_SVYGLM) = rownames(N5000_result_mat_IA) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
+colnames(N5000_result_mat_SVYGLM) = colnames(N5000_result_mat_IA) = cols[1:6]
 # SVYGLM results
-N5000_result_mat[,1] <- round(rowMeans(100*svyglm_res[23:33,1:7]),2)
-N5000_result_mat[,2] <- round(glm_standardized_bias_ind_mean[23:33], 2)
-N5000_result_mat[,3] <- round(rowMaxs(100*svyglm_res[23:33,1:7], value = TRUE),2)
-N5000_result_mat[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[23:33,1:7], value = FALSE)]
-N5000_result_mat[,5] <- round(rowMeans(100*svyglm_res[23:33,15:28]),2)
-N5000_result_mat[,6] <- round(glm_standardized_bias_ind_mean_D[23:33],2)
+N5000_result_mat_SVYGLM[,1] <- round(rowMeans(100*svyglm_res[23:33,1:7]),2)
+N5000_result_mat_SVYGLM[,2] <- round(glm_standardized_bias_ind_mean[23:33], 2)
+N5000_result_mat_SVYGLM[,3] <- round(rowMaxs(100*svyglm_res[23:33,1:7], value = TRUE),2)
+N5000_result_mat_SVYGLM[,4] <- colnames(data_w_Dem)[rowMaxs(100*svyglm_res[23:33,1:7], value = FALSE)]
+N5000_result_mat_SVYGLM[,5] <- round(rowMeans(100*svyglm_res[23:33,15:28]),2)
+N5000_result_mat_SVYGLM[,6] <- round(glm_standardized_bias_ind_mean_D[23:33],2)
 # Interaction total results
-N5000_result_mat[,7] <- round(rowMeans(100*total_w_interaction_res[23:33,1:7]),2)
-N5000_result_mat[,8] <- round(intera_standardized_bias_ind_mean[23:33], 2)
-N5000_result_mat[,9] <- round(rowMaxs(100*total_w_interaction_res[23:33,1:7], value = TRUE),2)
-N5000_result_mat[,10] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[23:33,1:7], value = FALSE)]
-N5000_result_mat[,11] <- round(rowMeans(100*total_w_interaction_res[23:33,15:28]),2)
-N5000_result_mat[,12] <- round(intera_standardized_bias_ind_mean_D[23:33],2)
+N5000_result_mat_IA[,1] <- round(rowMeans(100*total_w_interaction_res[23:33,1:7]),2)
+N5000_result_mat_IA[,2] <- round(intera_standardized_bias_ind_mean[23:33], 2)
+N5000_result_mat_IA[,3] <- round(rowMaxs(100*total_w_interaction_res[23:33,1:7], value = TRUE),2)
+N5000_result_mat_IA[,4] <- colnames(data_w_Dem)[rowMaxs(100*total_w_interaction_res[23:33,1:7], value = FALSE)]
+N5000_result_mat_IA[,5] <- round(rowMeans(100*total_w_interaction_res[23:33,15:28]),2)
+N5000_result_mat_IA[,6] <- round(intera_standardized_bias_ind_mean_D[23:33],2)
 
 
 
 # Interaction Target glm
 
-# N = 2500
+# N = 2000
 N2000_result_mat_target <- matrix(0, nrow=11, ncol=6)
 rownames(N2000_result_mat_target) = c("0.4","0.45","0.50","0.55","0.60","0.65","0.70","0,75","0.80","0.85","0.9")
 colnames(N2000_result_mat_target) = cols[1:6]
@@ -353,10 +360,15 @@ N5000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[
 # Standardised Biases
 print(xtable(SB_result_mat, type = "latex"), file = "SB_results_P40.tex")
 
-# SVYGLM & Interaction Total
-print(xtable(N2000_result_mat, type = "latex"), file = "N2000_results_P40.tex")
-print(xtable(N3000_result_mat, type = "latex"), file = "N3000_results_P40.tex")
-print(xtable(N5000_result_mat, type = "latex"), file = "N5000_results_P40.tex")
+# SVYGLM
+print(xtable(N2000_result_mat_SVYGLM, type = "latex"), file = "N2000_results_SVYGLM_P40.tex")
+print(xtable(N3000_result_mat_SVYGLM, type = "latex"), file = "N3000_results_SVYGLM_P40.tex")
+print(xtable(N5000_result_mat_SVYGLM, type = "latex"), file = "N5000_results_SVYGLM_P40.tex")
+
+# Interaction Total
+print(xtable(N2000_result_mat_IA, type = "latex"), file = "N2000_results_IA_P40.tex")
+print(xtable(N3000_result_mat_IA, type = "latex"), file = "N3000_results_IA_P40.tex")
+print(xtable(N5000_result_mat_IA, type = "latex"), file = "N5000_results_IA_P40.tex")
 
 # Interaction Target
 print(xtable(N2000_result_mat_target, type = "latex"), file = "N2000_target_results_P40.tex")
@@ -489,6 +501,12 @@ LRT_res_fin <- 100*round(cbind(LRT_res[1:11],LRT_res[12:22],LRT_res[23:33])/1000
 rownames(LRT_res_fin) <-  c(8:18)*0.05
 colnames(LRT_res_fin) <- c("2000","3000","5000")
 print(xtable(LRT_res_fin, type = "latex"), file = "LRT_results_P40.tex")
+
+Wald_res_fin <- 100*round(cbind(Wald_res[1:11],Wald_res[12:22],Wald_res[23:33])/1000,3)
+rownames(Wald_res_fin) <-  c(8:18)*0.05
+colnames(Wald_res_fin) <- c("2000","3000","5000")
+print(xtable(Wald_res_fin, type = "latex"), file = "Wald_results_P40.tex")
+
 
 #Wald result
 
