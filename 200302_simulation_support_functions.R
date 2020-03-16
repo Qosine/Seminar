@@ -81,6 +81,24 @@ rename_interaction_columns <- function(column_names) {
 
 ## DEPENDENT VARIABLES / OUTCOMES ##
 sigmoid_function <- function(x) 1/(1+exp(-x))
+inverse_sigmoid <- function(x) log(x/(1-x))
+transform_total_params <- function(target_share,
+                                   target_params,
+                                   nontarget_params) {
+  linear_combination = (target_share*sigmoid_function(target_params_w_Dem)
+                        + (1-target_share)*sigmoid_function(nontarget_params_w_Dem))
+  return(inverse_sigmoid(linear_combination))
+}
+
+correct_IA_total_estimates <- function(target_share,
+                                       glm_interaction_target_params,
+                                       glm_interaction_total_params) {
+  
+  glm_interaction_nontarget_params = glm_interaction_total_params - target_share*glm_interaction_target_params
+  glm_interaction_nontarget_params = glm_interaction_nontarget_params/(1-target_share)
+  return(inverse_sigmoid( target_share*sigmoid_function(glm_interaction_target_params)
+                          + (1-target_share)*sigmoid_function(glm_interaction_nontarget_params) ))
+}
 
 generate_response <- function(predictors, parameters, sample_size) {
   Pr_success <- sigmoid_function( predictors%*%parameters ) # compute Pr(Y=1 | X=x)
