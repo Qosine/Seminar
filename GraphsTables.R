@@ -154,8 +154,8 @@ c <- c("N2000_Q40_P10","N2000_Q45_P10","N2000_Q50_P10","N2000_Q55_P10","N2000_Q6
 #true_population_params <- true_population_params_sig
 
 #for p10
-true_population_params <- (CPS[ "25-34","Male"]*target_params_w_Dem
-+ (1-CPS["25-34","Male"])*nontarget_params_w_Dem)
+true_population_params <- (CPS[ "25-34","Male"]*target_params_w_Dem 
+                          + (1-CPS["25-34","Male"])*nontarget_params_w_Dem)
 
 
 cols <- c("/mu_E PB", "/mu SB",		"max_E PB", "Max_E PB",	"/mu_D pB",	"/mu_D SB",
@@ -197,10 +197,10 @@ for(i in c){
   j=j+1
 }
 
-prediction
+
 colnames(prediction_result) <- c("Weighted model", "Interaction model", "Bayesrate", "Always zero")
 rownames(prediction_result) <-  substr(c,nchar(c)-8,nchar(c))
-print(xtable(prediction_result, type = "latex"), file = "Prediction_table_P40.tex")
+print(xtable(prediction_result, type = "latex"), file = "Prediction_table_P10.tex")
 
 
 Q <- c(8:18)*0.05
@@ -358,30 +358,30 @@ N5000_result_mat_target[,6] <- round(intera_target_standardized_bias_ind_mean_D[
 
 
 # Standardised Biases
-print(xtable(SB_result_mat, type = "latex"), file = "SB_results_P40.tex")
+print(xtable(SB_result_mat, type = "latex"), file = "SB_results_P10.tex")
 
 # SVYGLM
-print(xtable(N2000_result_mat_SVYGLM, type = "latex"), file = "N2000_results_SVYGLM_P40.tex")
-print(xtable(N3000_result_mat_SVYGLM, type = "latex"), file = "N3000_results_SVYGLM_P40.tex")
-print(xtable(N5000_result_mat_SVYGLM, type = "latex"), file = "N5000_results_SVYGLM_P40.tex")
+print(xtable(N2000_result_mat_SVYGLM, type = "latex"), file = "N2000_results_SVYGLM_P10.tex")
+print(xtable(N3000_result_mat_SVYGLM, type = "latex"), file = "N3000_results_SVYGLM_P10.tex")
+print(xtable(N5000_result_mat_SVYGLM, type = "latex"), file = "N5000_results_SVYGLM_P10.tex")
 
 # Interaction Total
-print(xtable(N2000_result_mat_IA, type = "latex"), file = "N2000_results_IA_P40.tex")
-print(xtable(N3000_result_mat_IA, type = "latex"), file = "N3000_results_IA_P40.tex")
-print(xtable(N5000_result_mat_IA, type = "latex"), file = "N5000_results_IA_P40.tex")
+print(xtable(N2000_result_mat_IA, type = "latex"), file = "N2000_results_IA_P10.tex")
+print(xtable(N3000_result_mat_IA, type = "latex"), file = "N3000_results_IA_P10.tex")
+print(xtable(N5000_result_mat_IA, type = "latex"), file = "N5000_results_IA_P10.tex")
 
 # Interaction Target
-print(xtable(N2000_result_mat_target, type = "latex"), file = "N2000_target_results_P40.tex")
-print(xtable(N3000_result_mat_target, type = "latex"), file = "N3000_target_results_P40.tex")
-print(xtable(N5000_result_mat_target, type = "latex"), file = "N5000_target_results_P40.tex")
+print(xtable(N2000_result_mat_target, type = "latex"), file = "N2000_target_results_P10.tex")
+print(xtable(N3000_result_mat_target, type = "latex"), file = "N3000_target_results_P10.tex")
+print(xtable(N5000_result_mat_target, type = "latex"), file = "N5000_target_results_P10.tex")
 
 
 
 
 #Grahps for interaction and svyglm percentage bias
 N_obs <- c("2000","3000","5000")
-save_name_IA <- c("MaxMean_IA_2000_P40.png","MaxMean_IA_3000_P40.png","MaxMean_IA_5000_P40.png")
-save_name_svy <- c("MaxMean_svy_2000_P40.png","MaxMean_svy_3000_P40.png","MaxMean_svy_5000_P40.png")
+save_name_IA <- c("MaxMean_IA_2000_P10.png","MaxMean_IA_3000_P10.png","MaxMean_IA_5000_P10.png")
+save_name_svy <- c("MaxMean_svy_2000_P10.png","MaxMean_svy_3000_P10.png","MaxMean_svy_5000_P10.png")
 svy_grahps <- list()
 IA_graphs <- list()
 for(i in 1:3){
@@ -419,7 +419,8 @@ for(i in 1:3){
           axis.line = element_line(colour = "black"),
           panel.grid = element_blank(), legend.position = "none",
           axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank(),
-          aspect.ratio=1)
+          aspect.ratio=1)+
+    labs(y="Percent Bias")
   ggsave(save_name_IA[i])
 
   # ggplot for svyglm
@@ -433,31 +434,32 @@ for(i in 1:3){
           axis.line = element_line(colour = "black"),
           panel.grid = element_blank(),legend.position = "none",
           axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank(),
-          aspect.ratio=1)
+          aspect.ratio=1)+ 
+    labs(y="Percent Bias")
   ggsave(save_name_svy[i])
 }
 
 # Mean and max bias graphs
 svy_grahps[[1]]
-ggsave("svy_graph_2000_P40.png", width = 5, height = 5)
+ggsave("svy_graph_2000_P10.png", width = 5, height = 5)
 svy_grahps[[2]]
-ggsave("svy_graph_3000_P40.png", width = 5, height = 5)
+ggsave("svy_graph_3000_P10.png", width = 5, height = 5)
 svy_grahps[[3]]
-ggsave("svy_graph_5000_P40.png",width = 5, height = 5)
+ggsave("svy_graph_5000_P10.png",width = 5, height = 5)
 IA_graphs[[1]]
-ggsave("IA_graph_2000_P40.png",width = 5, height = 5)
+ggsave("IA_graph_2000_P10.png",width = 5, height = 5)
 IA_graphs[[2]]
-ggsave("IA_graph_3000_P40.png",width = 5, height = 5)
+ggsave("IA_graph_3000_P10.png",width = 5, height = 5)
 IA_graphs[[3]]
-ggsave("IA_graph_5000_P40.png",width = 5, height = 5)
+ggsave("IA_graph_5000_P10.png",width = 5, height = 5)
 
 
 
 
 #standardized bias graph
 N_obs <- c("2000","3000","5000")
-save_name_IA <- c("MaxMean_IA_2000_P40.png","MaxMean_IA_3000_P40.png","MaxMean_IA_5000_P40.png")
-save_name_svy <- c("MaxMean_svy_2000_P40.png","MaxMean_svy_3000_P40.png","MaxMean_svy_5000_P40.png")
+save_name_IA <- c("MaxMean_IA_2000_P10.png","MaxMean_IA_3000_P10.png","MaxMean_IA_5000_P10.png")
+save_name_svy <- c("MaxMean_svy_2000_P10.png","MaxMean_svy_3000_P10.png","MaxMean_svy_5000_P10.png")
 stdbias_graphs <- list()
 
 for(i in 1:4){
@@ -480,20 +482,21 @@ for(i in 1:4){
           axis.line = element_line(colour = "black"),
           legend.position = "none",
           panel.grid = element_blank(),
-          axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank())
+          axis.line.x.top = element_blank(),panel.border = element_blank(), axis.line.y.right = element_blank()) +
+    labs(y="Standardised Bias")
 
 
 }
 
 # ggarrange(stdbias_graphs[[1]], stdbias_graphs[[2]],stdbias_graphs[[3]], stdbias_graphs[[3]], common.legend = TRUE, legend="bottom")
-# ggsave("stdbias_graph_P40.png")
+# ggsave("stdbias_graph_P10.png")
 
 stdbias_graphs[[1]]
-ggsave("stdbias_graphs_2000_P40.png",width = 5, height = 5)
+ggsave("stdbias_graphs_2000_P10.png",width = 5, height = 5)
 stdbias_graphs[[2]]
-ggsave("stdbias_graphs_3000_P40.png",width = 5, height = 5)
+ggsave("stdbias_graphs_3000_P10.png",width = 5, height = 5)
 stdbias_graphs[[3]]
-ggsave("stdbias_graphs_5000_P40.png",width = 5, height = 5)
+ggsave("stdbias_graphs_5000_P10.png",width = 5, height = 5)
 
 
 #LRT result
@@ -501,19 +504,19 @@ LRT_res_fin <- round(100*(cbind(LRT_res[1:11],LRT_res[12:22],LRT_res[23:33])),1)
 rownames(LRT_res_fin) <-  c(8:18)*0.05
 colnames(LRT_res_fin) <- c("2000","3000","5000")
 
-#print(xtable(LRT_res_fin, type = "latex"), file = "LRT_results_P40.tex")
+#print(xtable(LRT_res_fin, type = "latex"), file = "LRT_results_P10.tex")
 
 Wald_res_fin <- round(100*(cbind(Wald_res[1:11],Wald_res[12:22],Wald_res[23:33])),1)
 rownames(Wald_res_fin) <-  c(8:18)*0.05
 colnames(Wald_res_fin) <- c("2000","3000","5000")
 
-#print(xtable(Wald_res_fin, type = "latex"), file = "Wald_results_P40.tex")
+#print(xtable(Wald_res_fin, type = "latex"), file = "Wald_results_P10.tex")
 
 Ttest_res_fin <- round(100*(cbind(T_test_res[1:11],T_test_res[12:22],T_test_res[23:33])),1)
 rownames(Ttest_res_fin) <-  c(8:18)*0.05
 colnames(Ttest_res_fin) <- c("2000","3000","5000")
 
-#print(xtable(T_test_res_fin, type = "latex"), file = "T_test_results_P40.tex")
+#print(xtable(T_test_res_fin, type = "latex"), file = "T_test_results_P10.tex")
 
 write.csv2(cbind(LRT_res_fin, Wald_res_fin, Ttest_res_fin),"rejections_P10.csv")
 
