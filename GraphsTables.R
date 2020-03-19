@@ -86,10 +86,10 @@ nontarget_params_wo_Dem = c(-1.5, -3, 3.2, -1.0, 0.5, 1.0, 0.6)
 nontarget_params_w_Dem = append(nontarget_params_wo_Dem, demographics_params)
 
 # Toggle map
+load("Reps2000_2000_3000.RData")
+load("200314_N2000_5000_P40.RData")
 setwd("C:/Users/marti/Documents/GitHub/Seminar/P10")
 #setwd("D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar")
-load("Reps2000_2000_3000.RData")
-#load("200314_N2000_5000_P40.RData")
 
 P10_ratio = 0.10298
 P20_ratio = 0.203195

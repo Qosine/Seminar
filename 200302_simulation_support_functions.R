@@ -201,5 +201,50 @@ standardisedBias <- function(beta_true, beta_hat) {
   return( (colMeans(beta_hat)-beta_true)/sqrt(diag(var(beta_hat))))
 }
 
+## Marginal effects ##
+# Simulation support functions
+XBeta <- function(SampleStatistic, beta_vector){
+  SampleStatistic*beta_vector
+}
+P_Yi1 <- function(XBeta){
+  sigmoid_function(XBeta)
+}
+P_Yi0 <- function(XBeta){
+  1 - sigmoid_function(XBeta)
+}
+marginal_effects_glm <- function(P_Yi1,P_Yi0, beta_vector){
+  P_Yi1*P_Yi0*beta_vector
+}
+marginal_effects_svyglm <- function(weights, y_i, P_Yi0, beta_vector){
+  (1/weights)*(y_i*beta_vector*P_Yi0())
+}
+
+X_statistic <- function(group, statistic = "mean"){
+  if (group == "target"){
+    X <- simulated_population$predictors
+  }else if (group == "non-target"){
+    X <- nontarget_predictors
+  }
+  else if (group == "total"){
+    X <- true_fullsample_variables$predictors
+  }
+  
+  if (statistic == "mean")
+  {X_statistic <- colMeans(X)}
+  else if (statistic == "median")
+  {X_statistic <- colMedians(X)}
+  else if (statistic == "Q25"){
+    X_statistic <- colQuantiles((X))[,2]}
+  else if (statistic == "Q75"){
+    X_statistic <- colQuantiles((X))[,4]  
+  }
+  return(X_statistic)
+}
+
+Estimated_Beta <- function(simulated_coefficients){
+  colMeans(simulated_coefficients)
+}
+
+
 ## PROCESS RESULTS ##
 
