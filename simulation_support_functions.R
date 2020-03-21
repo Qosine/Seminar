@@ -1,3 +1,9 @@
+#######################################################################
+### Functions called throughout simulation script
+### Authors:  Seminar BA&QM - Nielsen Group 4
+###           Hofstra/Kouwenhoven/Leenen/Stam
+#######################################################################
+
 ## SETUP ##
 split_sample <- function(data,
                          target_gender,
