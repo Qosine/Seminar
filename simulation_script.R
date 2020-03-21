@@ -5,20 +5,20 @@
 ### Usage:    Runs straight from Nielsen source data as long as
 ###           R libraries listed on lines 15-16 are installed
 ### Runtime:  Approximately 6 hours
-### Specs:    i7-8570H (6 physical cores + 6 hyperthreaded) @ 2.2 GHz
+### CPU:      i7-8570H (6 physical cores + 6 hyperthreaded) @ 2.2 GHz
 ###           Parallelised on 6 cores with Microsoft R Open
 #######################################################################
 
 
 # Fix seed and load libraries
 set.seed(123456)
-library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase); library(xtable);
+library(mvtnorm); library(dplyr); library(survey); library(ggplot2); library(robustbase); library(xtable)
 library(Rfast); library(reshape2); library(ggpubr)
 
 # Pathing - fix this on your machine first (set to local Git directory)
 path = "D:/brian/Documents/EUR/19-20 Business Analytics and QM/Block 3/Seminar Case Studies/Git/Seminar"
 setwd(path)
-source("./200302_simulation_support_functions.R")
+source("./simulation_support_functions.R")
 
 #######################################################################
 ################## DO NOT CHANGE THE FOLLOWING ########################
@@ -267,7 +267,7 @@ if (TRUE) {
              run_simulation(data_w_Dem, length(target_params_wo_Dem),
                                        target_params_w_Dem, nontarget_params_w_Dem, true_population_params_sig,
                                        sample_size_total = N, sample_size_target = (N*Q/100),
-                                       n_simulation_runs = 2000,
+                                       n_simulation_runs = 2,
                                        target_group_age = target_age,
                                        target_group_gender = target_gender))
     }
